@@ -1,0 +1,2218 @@
+<!DOCTYPE html>
+<html lang="ar" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!--
+  ╔══════════════════════════════════════════════════╗
+  ║           REW OS — Designed & Built by           ║
+  ║              Faisal SS505  © 2025                ║
+  ║      Unauthorized copying is prohibited.         ║
+  ╚══════════════════════════════════════════════════╝
+-->
+<title>REW OS</title>
+<style>
+:root {
+--os-bg: #f2f2f2;
+--os-text: #000000;
+--accent-blue: #0078D7;
+--start-bg: rgba(255, 255, 255, 0.98);
+--taskbar-bg: rgba(25, 25, 25, 0.7);
+--window-bg: rgba(25, 25, 25, 0.85);
+--font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+--taskbar-height: 40px;
+--anim-speed: 250ms;
+--anim-curve: cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+*, *::before, *::after { box-sizing: border-box !important; user-select: none; -webkit-user-drag: none; margin: 0; padding: 0; direction: ltr !important; border-radius: 0 !important; }
+html, body { width: 100vw; height: 100vh; overflow: hidden; font-family: var(--font-family); background-color: #004275; }
+.os-window { position: absolute; min-width: 300px; min-height: 200px; background: var(--window-bg); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px); box-shadow: 0 10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.08); z-index: 100; opacity: 0; transform: scale(0.95); visibility: hidden; transition: transform var(--anim-speed) var(--anim-curve), opacity var(--anim-speed) var(--anim-curve); }
+.os-window.active-win { transform: scale(1); opacity: 1; visibility: visible; }
+.os-window.closing-win { transform: scale(0.9); opacity: 0; pointer-events: none; }
+.os-window.dragging { transition: none !important; }
+#uac-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.65); backdrop-filter: blur(5px); z-index: 10000; display: none; justify-content: center; align-items: center; }
+#uac-dialog { background: #fff; width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); display: flex; flex-direction: column; }
+.uac-header { background: var(--accent-blue); color: white; padding: 12px 18px; font-size: 0.85rem; display: flex; align-items: center; }
+.uac-content { padding: 30px; color: #333; }
+.uac-app-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding: 15px; background: rgba(0,120,215,0.05); border: 1px solid rgba(0,120,215,0.1); border-left: 4px solid var(--accent-blue); }
+.uac-app-icon { font-size: 2.8rem; }
+.uac-app-name-large { font-size: 1.3rem; font-weight: 600; color: #111; }
+.uac-info { font-size: 0.9rem; padding: 0 5px; }
+.uac-label { font-weight: 600; color: #666; display: block; margin-bottom: 4px; }
+.uac-verified { color: #27ae60; font-weight: 700; display: block; font-size: 1rem; }
+.uac-spacer { height: 20px; }
+.uac-path { color: #444; word-break: break-all; display: block; font-family: 'Consolas', monospace; font-size: 0.85rem; background: #f9f9f9; padding: 8px; border: 1px solid #eee; }
+.uac-footer { background: #f2f2f2; padding: 15px 20px; display: flex; justify-content: flex-end; gap: 12px; }
+.uac-btn { padding: 8px 35px; cursor: pointer; border: 1px solid #ccc; background: #fff; font-size: 0.85rem; }
+.uac-btn.yes { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+#desktop-environment { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background-size: cover; background-position: center; z-index: 10; display: grid; grid-template-columns: repeat(auto-fill, 80px); grid-template-rows: repeat(auto-fill, 88px); grid-auto-flow: column; align-content: start; justify-content: start; padding: 10px; gap: 4px; overflow: hidden; }
+.desktop-selection-marquee { position: absolute; background: rgba(0,120,215,0.25) !important; border: 1px solid rgba(0,120,215,0.9) !important; pointer-events: none; z-index: 20; display: none; }
+.desktop-icon { width:80px; height:88px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; cursor:pointer; padding:4px; border-radius:4px; user-select:none; }
+.desktop-icon:hover { background:rgba(255,255,255,0.1); }
+.desktop-icon.selected { background:rgba(0,120,215,0.3); outline:1px solid rgba(0,120,215,0.8); }
+.desktop-icon-img { width:40px; height:40px; display:flex; align-items:center; justify-content:center; }
+.desktop-icon-img img { width:40px; height:40px; object-fit:contain; }
+.desktop-icon-img svg { width:36px; height:36px; }
+.desktop-icon-label { font-size:0.68rem; color:#fff; text-align:center; line-height:1.3; word-break:break-word; max-width:76px; text-shadow:0 1px 3px rgba(0,0,0,0.8); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* OOBE - شاشة الإعداد الأولي */
+#oobe-screen { position:fixed; inset:0; z-index:99998; display:none; flex-direction:column; font-family:"Segoe UI",sans-serif; }
+#oobe-wait { background:#1a6ebd; color:#fff; width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:28px; }
+/* دائرة تحميل Win10 style */
+.win10-spinner { width:36px; height:36px; position:relative; }
+.win10-spinner-dot { position:absolute; width:7px; height:7px; border-radius:50%; background:#fff; animation:win10-spin 1.2s ease-in-out infinite; }
+.win10-spinner-dot:nth-child(1){top:0;left:50%;transform:translateX(-50%);animation-delay:0s}
+.win10-spinner-dot:nth-child(2){top:14%;right:14%;animation-delay:0.15s}
+.win10-spinner-dot:nth-child(3){top:50%;right:0;transform:translateY(-50%);animation-delay:0.3s}
+.win10-spinner-dot:nth-child(4){bottom:14%;right:14%;animation-delay:0.45s}
+.win10-spinner-dot:nth-child(5){bottom:0;left:50%;transform:translateX(-50%);animation-delay:0.6s}
+.win10-spinner-dot:nth-child(6){bottom:14%;left:14%;animation-delay:0.75s}
+.win10-spinner-dot:nth-child(7){top:50%;left:0;transform:translateY(-50%);animation-delay:0.9s}
+.win10-spinner-dot:nth-child(8){top:14%;left:14%;animation-delay:1.05s}
+@keyframes win10-spin { 0%,100%{opacity:0.15;transform:scale(0.7)} 50%{opacity:1;transform:scale(1)} }
+#oobe-wait-text { font-size:1.5rem; font-weight:300; letter-spacing:3px; color:#fff; }
+/* فورم Win8.1 style */
+#oobe-form-wrap { background:#1e5799; width:100%; height:100%; display:none; flex-direction:row; }
+.oobe-left-panel { width:38%; background:#1a6ebd; display:flex; flex-direction:column; justify-content:center; padding:60px 40px; }
+.oobe-left-title { font-size:2.4rem; font-weight:200; color:#fff; line-height:1.2; margin-bottom:12px; }
+.oobe-left-sub { font-size:0.82rem; color:rgba(255,255,255,0.6); line-height:1.6; }
+.oobe-right-panel { flex:1; background:#fff; display:flex; flex-direction:column; justify-content:center; padding:50px 60px; }
+.oobe-right-title { font-size:1.6rem; font-weight:300; color:#1a6ebd; margin-bottom:4px; }
+.oobe-right-sub { font-size:0.78rem; color:#666; margin-bottom:30px; }
+.oobe-field { display:flex; flex-direction:column; gap:2px; margin-bottom:14px; }
+.oobe-field label { font-size:0.7rem; color:#555; text-transform:uppercase; letter-spacing:0.5px; }
+.oobe-field input { border:none; border-bottom:1px solid #bbb; color:#222; padding:8px 2px; font-size:0.9rem; font-family:"Segoe UI",sans-serif; outline:none; background:transparent; transition:border-color 0.2s; }
+.oobe-field input:focus { border-bottom-color:#1a6ebd; }
+.oobe-field .oobe-hint { font-size:0.67rem; color:#c0392b; margin-top:2px; display:none; }
+.oobe-next-btn { margin-top:16px; padding:10px 28px; background:#1a6ebd; color:#fff; border:none; font-size:0.88rem; font-family:"Segoe UI",sans-serif; cursor:pointer; letter-spacing:0.5px; transition:background 0.15s; align-self:flex-start; }
+.oobe-next-btn:hover { background:#15518e; }
+/* شاشة القوانين */
+#oobe-tos { background:#fff; width:100%; height:100%; display:none; flex-direction:row; }
+.oobe-tos-left { width:38%; background:#1a6ebd; display:flex; flex-direction:column; justify-content:center; padding:60px 40px; }
+.oobe-tos-right { flex:1; display:flex; flex-direction:column; justify-content:center; padding:50px 60px; gap:16px; }
+.oobe-tos-title { font-size:1.5rem; font-weight:300; color:#1a6ebd; margin-bottom:8px; }
+.oobe-tos-body { font-size:0.78rem; color:#444; line-height:1.9; flex:1; overflow-y:auto; max-height:320px; padding-left:2px; }
+/* شاشة الجاهزية */
+#oobe-ready { background:#000; width:100%; height:100%; display:none; align-items:center; justify-content:center; flex-direction:column; gap:20px; }
+.oobe-ready-line { font-size:1.05rem; color:#fff; font-weight:300; opacity:0; transition:opacity 0.6s ease; letter-spacing:0.5px; }
+/* شاشة تسجيل الدخول */
+#login-screen { position:fixed; inset:0; z-index:9998; display:none; flex-direction:column; align-items:center; justify-content:center; font-family:Segoe UI,sans-serif; background-size:cover; background-position:center; }
+#login-screen::before { content:''; position:absolute; inset:0; background:rgba(0,0,0,0.45); backdrop-filter:blur(8px); }
+.login-box { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:14px; }
+.login-avatar { width:90px; height:90px; border-radius:50%; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; }
+.login-username { font-size:1.3rem; font-weight:300; color:#fff; letter-spacing:0.5px; }
+.login-input-wrap { display:flex; align-items:center; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); width:260px; }
+.login-input-wrap input { flex:1; background:transparent; border:none; color:#fff; padding:9px 12px; font-size:0.88rem; font-family:Segoe UI,sans-serif; outline:none; }
+.login-input-wrap input::placeholder { color:rgba(255,255,255,0.4); }
+.login-submit { background:rgba(255,255,255,0.15); border:none; color:#fff; padding:9px 12px; cursor:pointer; transition:background 0.15s; }
+.login-submit:hover { background:rgba(255,255,255,0.28); }
+.login-err { font-size:0.72rem; color:#ff6b6b; display:none; }
+.login-nopass { font-size:0.72rem; color:rgba(255,255,255,0.4); cursor:pointer; text-decoration:underline; }
+.login-nopass:hover { color:rgba(255,255,255,0.7); }
+
+#lock-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-size: cover; background-position: center; z-index: 9999; display: flex; flex-direction: column; justify-content: flex-end; padding: 5rem; transition: transform 0.7s var(--anim-curve); cursor: default; }
+.lock-time { font-size: 7rem; font-weight: 300; color: white; line-height: 0.8; }
+.lock-date { font-size: 1.8rem; font-weight: 300; color: white; margin-top: 1.5rem; }
+#taskbar { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--taskbar-height); background: var(--taskbar-bg); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px); z-index: 5000; display: flex; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); }
+#start-btn { width: 48px; height: 100%; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+#start-btn:hover { background: rgba(255,255,255,0.1); }
+#start-ctx-menu { position:fixed; z-index:99998; background:rgba(18,18,28,0.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); min-width:220px; padding:4px 0; display:none; }
+#start-ctx-menu.show { display:block; }
+.sctx-item { padding:8px 16px; font-size:0.82rem; color:#e0e0e0; cursor:pointer; display:flex; align-items:center; gap:10px; opacity:0; transform:translateX(-8px); transition:background 0.15s; }
+.sctx-item.visible { opacity:1; transform:translateX(0); transition:opacity 0.18s ease, transform 0.18s ease, background 0.15s; }
+.sctx-item:hover { background:rgba(255,255,255,0.1); }
+.sctx-item.danger { color:#ff6b6b; }
+.sctx-sep { height:1px; background:rgba(255,255,255,0.08); margin:4px 10px; opacity:0; transition:opacity 0.18s ease; }
+.sctx-sep.visible { opacity:1; }
+.win-logo-img { width: 20px; height: 20px; object-fit: contain; }
+#taskbar-pinned { display: flex; height: 100%; padding: 0 2px; }
+.tb-pinned-icon { width: 40px; height: 100%; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.3rem; border-bottom: 2px solid transparent; position: relative; }
+.tb-pinned-icon:hover { background: rgba(255,255,255,0.1); }
+.tb-pinned-icon.active { background: rgba(255,255,255,0.15); border-bottom-color: var(--accent-blue); }
+.tb-pinned-icon.minimized-win { border-bottom-color: rgba(255,255,255,0.4); }
+.tb-app-icon.minimized-win::after { content:""; position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:8px; height:2px; background:rgba(255,255,255,0.4); border-radius:2px; }
+.tb-app-icon.active::after { content:""; position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:24px; height:3px; background:var(--accent-blue); border-radius:2px; }
+.tb-app-icon { border-bottom: none !important; }
+#taskbar-apps { display: flex; height: 100%; flex: 1; padding: 0 5px; gap: 2px; }
+.tb-app-icon { width: 40px; height: 100%; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.3rem; border-bottom: 3px solid transparent; position: relative; }
+.tb-app-icon.active { border-bottom-color: var(--accent-blue); background: rgba(255,255,255,0.15); }
+.system-tray { display: flex; align-items: center; height: 100%; margin-left: auto; padding-right: 5px; }
+.tray-icon img { height: 16px; filter: invert(1); }
+.taskbar-clock { padding: 0 12px; font-size: 0.72rem; text-align: right; color: #fff; line-height: 1.3; cursor: pointer; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+.taskbar-clock:hover { background: rgba(255,255,255,0.1); }
+#show-desktop-btn { width: 12px; height: 100%; border-left: 1px solid rgba(255,255,255,0.1); margin-left: 8px; cursor: pointer; }
+#start-menu { position: fixed; bottom: var(--taskbar-height); left: 0; width: 300px; height: 500px; min-width: 300px; max-width: 800px; min-height: 400px; max-height: 90vh; background: var(--taskbar-bg); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px); color: white; z-index: 4999; display: flex; box-shadow: 2px -2px 20px rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.1); border-bottom: none; transform: translateY(12px); transform-origin: bottom center; opacity: 0; visibility: hidden; transition: transform 0.22s cubic-bezier(0.17,0.89,0.32,1.1), opacity 0.18s ease, visibility 0.22s; overflow: hidden; }
+#start-menu.show { transform: translateY(0); opacity: 1; visibility: visible; }
+.start-resizer { position: absolute; z-index: 4009; }
+.resizer-top { top: -3px; left: 0; right: 0; height: 6px; cursor: ns-resize; }
+.resizer-right { top: 0; bottom: 0; right: -3px; width: 6px; cursor: ew-resize; }
+.resizer-tr { top: -4px; right: -4px; width: 10px; height: 10px; cursor: nesw-resize; z-index: 4010; }
+.start-sidebar { background: rgba(15,15,22,0.18); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); display: flex; flex-direction: column; align-items: flex-start; padding-bottom: 8px; padding-top: 8px; width: 42px; min-width: 42px; max-width: 42px; flex-shrink: 0; overflow: hidden; transition: width 0.25s ease, background 0.22s ease, backdrop-filter 0.22s ease; position: absolute; left: 0; top: 0; bottom: 0; z-index: 20; justify-content: flex-end; border-right: 1px solid rgba(255,255,255,0.04); }
+.start-sidebar:hover .sidebar-expand-label, .start-sidebar:hover .sidebar-btn-label { opacity: 1; }
+.start-body { display: flex; width: 100%; height: 100%; overflow: hidden; padding-left: 42px; box-sizing: border-box; }.start-sidebar-top { display: flex; align-items: center; gap: 10px; padding: 8px 0; width: 100%; cursor: default; flex-shrink: 0; white-space: nowrap; border-radius: 4px; }
+.start-sidebar-top:hover { background: rgba(255,255,255,0.1); }
+.sidebar-hamburger { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; min-width: 20px; margin-left: 11px; margin-right: 0; }
+.sidebar-hamburger span { display: block; width: 20px; height: 1.5px; background: #fff; border-radius: 2px; }
+.sidebar-expand-label { font-size: 0.95rem; font-weight: 700; color: #fff; white-space: nowrap; opacity: 0; transition: opacity 0.15s ease; }
+.start-sidebar-spacer { flex: 1; }
+.sidebar-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 0; cursor: pointer; flex-shrink: 0; white-space: nowrap; border-radius: 4px; }
+.sidebar-btn:hover { background: rgba(255,255,255,0.12); }
+.sidebar-btn svg { width: 18px; height: 18px; min-width: 18px; margin-left: 12px; margin-right: 0; flex-shrink: 0; fill: rgba(255,255,255,0.9); flex-shrink: 0; min-width: 20px; }
+.sidebar-btn-label { font-size: 0.82rem; color: #fff; white-space: nowrap; opacity: 0; transition: opacity 0.15s ease; }
+#power-popup { position: fixed; bottom: calc(var(--taskbar-height) + 8px); left: 8px; background: rgba(20,20,20,0.97); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 -4px 20px rgba(0,0,0,0.7); display: none; width: 180px; flex-direction: column; z-index: 999999; color: white; border-radius: 4px; padding: 4px 0; }
+.power-item { padding: 10px 15px; font-size: 0.84rem; cursor: pointer; text-align: right; color: #e0e0e0; display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+.power-item:hover { background: rgba(255,255,255,0.1); }
+#win8-search-pane { position: fixed; top: 0; right: 0; width: 340px; height: 100vh; background: rgba(25,25,25,0.7); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px); z-index: 8500; display: flex; flex-direction: column; padding: 40px 25px; box-shadow: -5px 0 25px rgba(0,0,0,0.4); border-left: 1px solid rgba(255,255,255,0.1); transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.1,0.9,0.2,1); color: white; }
+#win8-search-pane.show { transform: translateX(0); }
+.search-pane-title { font-size: 2.8rem; font-weight: 300; margin-bottom: 30px; }
+.search-input-container { display: flex; background: white; padding: 10px 15px; align-items: center; border: 2px solid transparent; transition: 0.2s; }
+.search-input-container:focus-within { border-color: var(--accent-blue); }
+.search-input-container input { flex: 1; border: none; outline: none; font-size: 1rem; color: black; font-family: var(--font-family); }
+.search-input-container svg { width: 18px; fill: #666; cursor: pointer; }
+.search-results-area { flex: 1; margin-top: 20px; overflow-y: auto; color: #ccc; font-size: 0.9rem; }
+#search-btn { width: 48px; height: 100%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
+#search-btn:hover { background: rgba(255,255,255,0.1); }
+#search-btn svg { width: 18px; fill: #fff; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
+.start-apps-list { padding: 5px 0; overflow-y: auto; width: 220px; flex-shrink: 0; border-left: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; }
+.start-list-header { padding: 14px 15px 6px; font-size: 1.3rem; font-weight: 300; color: #fff; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 4px; flex-shrink: 0; }
+.start-section-divider { padding: 10px 15px 4px; }
+.start-section-label { font-size: 0.68rem; color: rgba(255,255,255,0.45); letter-spacing: 0.5px; text-align: right; display: block; }
+.start-apps-scroll { flex: 1; overflow-y: auto; }
+.app-item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; transition: 0.1s; }
+.app-item:hover { background: rgba(255,255,255,0.1); }
+.app-icon-small { width: 22px; margin-right: 12px; font-size: 1.1rem; display: flex; justify-content: center; }
+.start-tiles-container { flex: 1; padding: 20px; overflow-y: auto; display: none; }
+#start-menu.expanded .start-tiles-container { display: block; }
+.tiles-group-title { font-size: 0.85rem; color: #ccc; font-weight: 600; margin-bottom: 15px; }
+.tiles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; min-height: 100px; padding-bottom: 20px; }
+.metro-tile { background: var(--accent-blue); color: white; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; position: relative; transition: transform 0.1s, filter 0.2s; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1); }
+.metro-tile:hover { filter: brightness(1.1); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+.metro-tile:active { transform: scale(0.95); }
+.metro-tile .tile-icon { font-size: 2rem; margin-bottom: 8px; }
+.metro-tile .tile-name { font-size: 0.7rem; font-weight: 400; position: absolute; bottom: 8px; left: 8px; right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.metro-tile.drag-over { border: 2px dashed rgba(255,255,255,0.8); background: rgba(0,120,215,0.8); }
+.window-titlebar { height: 32px; background: rgba(15,15,15,0.6); display: flex; align-items: center; padding-left: 10px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.window-title { font-size: 0.78rem; color: #ddd; flex: 1; }
+.window-controls { display: flex; height: 100%; }
+.win-btn { width: 46px; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 0.85rem; cursor: pointer; color: #ccc; }
+.win-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.win-btn.close:hover { background: #e81123; color: white; }
+.window-content { flex: 1; background: transparent; overflow: auto; padding: 20px; color: #ddd; }
+.window-content.is-terminal { padding: 0 !important; background: #000 !important; }
+.window-content.is-settings { padding: 0 !important; }
+.terminal-container { background: #000; color: #ccc; font-family: 'Consolas', monospace; padding: 12px; height: 100%; width: 100%; overflow-y: auto; font-size: 14px; }
+.terminal-output { white-space: pre-wrap; margin-bottom: 10px; color: #ccc; }
+.terminal-line { display: flex; }
+.terminal-input { background: transparent; border: none; color: #fff; font-family: inherit; font-size: inherit; width: 100%; outline: none; caret-color: #fff; }
+.settings-label { font-size: 0.95rem; font-weight: 600; margin: 15px 0 10px 0; display: block; color: #ddd; }
+.settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+.bg-card { aspect-ratio: 16/9; background-size: cover; border: 2px solid rgba(255,255,255,0.15); cursor: pointer; transition: 0.2s; }
+.bg-card:hover { border-color: var(--accent-blue); }
+.settings-input { width: 100%; padding: 10px; font-size: 0.82rem; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.07); color: #ddd; margin-bottom: 10px; outline: none; }
+.settings-btn { padding: 6px 20px; background: var(--accent-blue); color: white; border: none; cursor: pointer; font-size: 0.82rem; }
+/* ===== Task Manager ===== */
+.os-window:has(#tm-wrap) .window-content { padding: 0 !important; overflow: hidden !important; }
+.tm-perf-side { padding:10px 12px; cursor:pointer; border-right:2px solid transparent; margin-bottom:2px; }
+.tm-perf-side:hover { background:rgba(255,255,255,0.05); }
+.tm-perf-side-active { border-right-color:#0078D7 !important; background:rgba(0,120,215,0.1) !important; }
+.tm-info-cell { background:rgba(255,255,255,0.04); padding:8px 10px; border:1px solid rgba(255,255,255,0.07); }
+.tm-info-label { font-size:0.65rem; color:rgba(255,255,255,0.35); margin-bottom:2px; }
+.tm-info-val { font-size:0.85rem; color:#ddd; font-weight:500; }
+.tm-tab:hover { background: rgba(255,255,255,0.05); color: #ddd; }
+.tm-tab-active { color: #8ab4f8 !important; border-right-color: #0078D7 !important; background: rgba(0,120,215,0.08) !important; }
+.os-window:has(#ts-wrap) { background: #f0f0f0 !important; backdrop-filter: none !important; border: 1px solid #999 !important; }
+.os-window:has(#ts-wrap) .window-titlebar { background: linear-gradient(180deg,#f0f0f0,#dcdcdc) !important; border-bottom: 1px solid #aaa !important; }
+.os-window:has(#ts-wrap) .window-title { color: #000 !important; font-size: 0.8rem !important; }
+.os-window:has(#ts-wrap) .win-btn { color: #444 !important; }
+.os-window:has(#ts-wrap) .win-btn:hover { background: rgba(0,0,0,0.1) !important; color: #000 !important; }
+.os-window:has(#ts-wrap) .win-btn.close:hover { background: #e81123 !important; color: #fff !important; }
+.os-window:has(#wf-wrap) { background: #f0f0f0 !important; backdrop-filter: none !important; border: 1px solid #999 !important; }
+.os-window:has(#wf-wrap) .window-titlebar { background: linear-gradient(180deg,#f0f0f0,#dcdcdc) !important; border-bottom: 1px solid #aaa !important; }
+.os-window:has(#wf-wrap) .window-title { color: #000 !important; font-size: 0.8rem !important; }
+.os-window:has(#wf-wrap) .win-btn { color: #444 !important; font-size: 0.75rem !important; }
+.os-window:has(#wf-wrap) .win-btn:hover { background: rgba(0,0,0,0.1) !important; color: #000 !important; }
+.os-window:has(#wf-wrap) .win-btn.close:hover { background: #e81123 !important; color: #fff !important; }
+.wf-item { display:flex; align-items:flex-start; gap:12px; padding:12px; margin-bottom:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); cursor:pointer; }
+.wf-item:hover { background:rgba(255,255,255,0.08); }
+.wf-item input[type=checkbox] { width:16px; height:16px; margin-top:3px; flex-shrink:0; cursor:pointer; accent-color:var(--accent-blue); }
+.wf-name { font-size:0.88rem; color:#fff; margin-bottom:4px; }
+.wf-desc { font-size:0.75rem; color:#888; }
+.wf-btn { padding:7px 22px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.07); color:#ddd; }
+.wf-btn.wf-apply { background:var(--accent-blue); border-color:var(--accent-blue); color:#fff; }
+.wf-btn:hover { filter:brightness(1.2); }
+.ie-toolbar { background: #f0f0f0; border-bottom: 1px solid #bbb; padding: 4px 6px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.ie-nav-btns { display: flex; gap: 2px; }
+.ie-nav-btn { background: linear-gradient(180deg,#fafafa,#e0e0e0); border: 1px solid #aaa; width: 26px; height: 24px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; color: #333; }
+.ie-nav-btn:hover { background: linear-gradient(180deg,#fff,#d0e8ff); border-color: #3c7fb1; }
+.ie-nav-btn:active { background: #c0d8f0; }
+.ie-home-btn { font-size: 0.85rem; }
+.ie-address-bar { flex: 1; display: flex; align-items: center; background: #fff; border: 1px solid #aaa; height: 24px; padding: 0 4px; gap: 4px; }
+.ie-address-bar:focus-within { border-color: #3c7fb1; }
+.ie-lock-icon { font-size: 0.75rem; }
+.ie-address-input { flex: 1; border: none; outline: none; font-size: 0.8rem; font-family: 'Segoe UI', sans-serif; color: #000; background: transparent; direction: ltr; }
+.ie-go-btn { background: linear-gradient(180deg,#fafafa,#e0e0e0); border: 1px solid #aaa; border-radius: 0 !important; padding: 2px 10px; font-size: 0.75rem; cursor: pointer; color: #333; white-space: nowrap; height: 22px; }
+.ie-go-btn:hover { background: linear-gradient(180deg,#fff,#d0e8ff); border-color: #3c7fb1; color: #1a5e9a; }
+.ie-menu-bar { background: #f5f5f5; border-bottom: 1px solid #ccc; display: flex; padding: 1px 8px; flex-shrink: 0; }
+.ie-menu-item { padding: 2px 10px; font-size: 0.78rem; color: #333; cursor: pointer; }
+.ie-menu-item:hover { background: #d0e8ff; color: #1a5e9a; }
+.ie-frame-container { flex: 1; position: relative; background: #fff; overflow: hidden; }
+.ie-frame { width: 100%; height: 100%; border: none; display: block; }
+.ie-placeholder { width:100%; height:100%; background:#fff; display:flex; align-items:center; justify-content:center; position:absolute; inset:0; }
+.ie-placeholder-inner { text-align:center; padding:30px; max-width:400px; }
+.ie-placeholder-title { font-size:1.2rem; font-weight:600; color:#1a5e9a; margin-bottom:10px; }
+.ie-placeholder-sub { font-size:0.82rem; color:#555; line-height:1.6; }
+.ie-open-btn { margin-top:16px; padding:7px 24px; background:#0078D7; color:#fff; border:none; font-size:0.85rem; cursor:pointer; font-family:Segoe UI,sans-serif; }
+.ie-frame { position:absolute; inset:0; width:100%; height:100%; border:none; display:none; background:#fff; }
+.ie-blocked-inner { max-width: 480px; text-align: center; font-family: 'Segoe UI', sans-serif; color: #333; }
+.ie-blocked-title { font-size: 1.2rem; font-weight: 600; color: #cc0000; margin-bottom: 8px; }
+.ie-blocked-sub { font-size: 0.88rem; color: #555; margin-bottom: 8px; }
+.ie-blocked-url { font-size: 0.78rem; color: #777; word-break: break-all; background: #f5f5f5; padding: 6px; margin-top: 4px; }
+.ie-blocked-hint { font-size: 0.82rem; color: #555; text-align: right; line-height: 1.8; }
+.ie-statusbar { background: linear-gradient(180deg,#e8e8e8,#d8d8d8); border-top: 1px solid #bbb; height: 22px; display: flex; align-items: center; padding: 0 8px; font-size: 0.72rem; color: #444; gap: 12px; flex-shrink: 0; direction: rtl; }
+/* IE window overrides */
+.os-window:has(.ie-toolbar) { background: #f0f0f0 !important; backdrop-filter: none !important; border: 2px solid #6a9fd8 !important; display: flex; flex-direction: column; }
+.os-window:has(.ie-toolbar) .window-titlebar { background: linear-gradient(180deg, #4d9de0, #1c6fba) !important; border-bottom: 1px solid #1a5fa0 !important; }
+.os-window:has(.ie-toolbar) .window-title { color: #fff !important; font-weight: 600; }
+.os-window:has(.ie-toolbar) .win-btn { color: #fff !important; }
+.os-window:has(.ie-toolbar) .win-btn:hover { background: rgba(255,255,255,0.25) !important; }
+.os-window:has(.ie-toolbar) .win-btn.close:hover { background: #e81123 !important; }
+.settings-layout { display: flex; height: 100%; gap: 0; }
+.settings-nav { width: 160px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; padding: 10px 0; }
+.settings-nav-item { padding: 10px 16px; font-size: 0.82rem; color: #bbb; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.15s; }
+.settings-nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+.settings-nav-item.active { background: rgba(255,255,255,0.12); color: #fff; border-left: 2px solid var(--accent-blue); }
+.settings-nav-item span { font-size: 1.1rem; }
+.settings-page { flex: 1; padding: 20px; overflow-y: auto; display: none; }
+.settings-page.active { display: block; }
+#snap-preview { position: fixed; background: rgba(255,255,255,0.12); border: 2px solid rgba(40,40,40,0.6); z-index: 4500; display: none; pointer-events: none; transition: 0.1s; }
+#snap-assist-overlay { position: fixed; background: rgba(0,0,0,0.4); backdrop-filter: blur(12px); z-index: 4400; display: none; padding: 40px; overflow-y: auto; }
+.snap-assist-title { color: white; font-size: 1.2rem; margin-bottom: 25px; text-align: center; }
+#os-context-menu { position: fixed; background: rgba(25,25,25,0.97); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 2px 2px 16px rgba(0,0,0,0.6); z-index: 10000; display: none; width: 200px; padding: 4px 0; border-radius: 4px; }
+#text-ctx-menu { position:fixed; background:rgba(22,22,32,0.97); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); box-shadow:2px 4px 18px rgba(0,0,0,0.7); z-index:99997; display:none; min-width:140px; padding:4px 0; border-radius:4px; }
+.tctx-item { padding:8px 14px; font-size:0.8rem; color:#e0e0e0; cursor:pointer; display:flex; align-items:center; gap:9px; font-family:Segoe UI,sans-serif; transition:background 0.12s; }
+.tctx-item:hover { background:rgba(255,255,255,0.1); }
+.tctx-item svg { flex-shrink:0; }
+.context-item { padding: 9px 15px; font-size: 0.82rem; cursor: pointer; text-align: right; color: #e0e0e0; }
+.context-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.context-item.admin { font-weight: 600; border-top: 1px solid #eee; margin-top: 4px; padding-top: 8px; }
+.tb-pinned-icon .tb-tooltip { position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%); background: rgba(30,30,30,0.95); color: #fff; font-size: 0.72rem; padding: 4px 10px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
+.tb-pinned-icon:hover .tb-tooltip { opacity: 1; }
+.tb-pinned-icon img, .tb-app-icon img { width: 22px; height: 22px; object-fit: contain; }
+.app-icon-small img { width: 18px; height: 18px; object-fit: contain; }
+.metro-tile img { width: 2.2rem; height: 2.2rem; object-fit: contain; margin-bottom: 8px; }
+.window-title img { width: 16px; height: 16px; object-fit: contain; vertical-align: middle; margin-right: 4px; }
+/* Calendar popup */
+#clock-popup { position: fixed; bottom: var(--taskbar-height); right: 0; width: 340px; background: var(--taskbar-bg); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px); border: 1px solid rgba(255,255,255,0.1); border-bottom: none; box-shadow: none; z-index: 4998; color: white; padding: 16px; transform: translateY(12px); transform-origin: bottom right; opacity: 0; visibility: hidden; transition: transform 0.22s cubic-bezier(0.17,0.89,0.32,1.1), opacity 0.18s ease, visibility 0.22s; }
+#clock-popup.show { transform: translateY(0); opacity: 1; visibility: visible; }
+.clock-popup-time { font-size: 3.5rem; font-weight: 300; text-align: right; line-height: 1; }
+.clock-popup-date { font-size: 1rem; text-align: right; color: #ccc; margin: 6px 0 16px; }
+.cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.82rem; font-weight: 600; }
+.cal-nav { cursor: pointer; padding: 2px 8px; background: rgba(255,255,255,0.07); }
+.cal-nav:hover { background: rgba(255,255,255,0.15); }
+.cal-viewport { overflow: hidden; position: relative; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+.cal-grid.slide-in-right { animation: calSlideInRight 0.22s cubic-bezier(0.17,0.89,0.32,1.1) forwards; }
+.cal-grid.slide-in-left  { animation: calSlideInLeft  0.22s cubic-bezier(0.17,0.89,0.32,1.1) forwards; }
+.cal-grid.slide-out-right{ animation: calSlideOutRight 0.18s ease forwards; }
+.cal-grid.slide-out-left { animation: calSlideOutLeft  0.18s ease forwards; }
+@keyframes calSlideInRight  { from { opacity:0; transform:translateX(40px);  } to { opacity:1; transform:translateX(0); } }
+@keyframes calSlideInLeft   { from { opacity:0; transform:translateX(-40px); } to { opacity:1; transform:translateX(0); } }
+@keyframes calSlideOutRight { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(-40px); } }
+@keyframes calSlideOutLeft  { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(40px);  } }
+.cal-day-name { text-align: center; font-size: 0.68rem; color: #888; padding: 2px 0; }
+.cal-day { text-align: center; font-size: 0.75rem; padding: 4px 2px; cursor: default; }
+.cal-day:hover { background: rgba(255,255,255,0.08); }
+.cal-day.today { background: var(--accent-blue); color: white; font-weight: 700; }
+.cal-day.other-month { color: #555; }
+/* Settings lang/time tab */
+.settings-select { width: 100%; padding: 8px 10px; font-size: 0.82rem; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.07); color: #ddd; margin-bottom: 14px; outline: none; cursor: pointer; }
+.settings-select option { background: #222; color: #ddd; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.settings-row label { font-size: 0.85rem; color: #bbb; }
+/* ===== Boot Screen ===== */
+#boot-screen { position: fixed; top:0; left:0; width:100vw; height:100vh; background:#000; display:flex; flex-direction:column; align-items:center; z-index:99999; transition: opacity 0.25s ease; cursor: none; }
+#boot-screen.fade-out { opacity:0; pointer-events:none; }
+#boot-logo { width:115px; height:115px; object-fit:contain; position:absolute; top:40%; transform:translateY(-50%); }
+.boot-loader { width:35px; height:35px; }
+.boot-loader circle { fill:none; stroke:white; stroke-width:6; stroke-linecap:round; stroke-dasharray:90 300; animation:boot-spin 3.2s linear infinite; }
+@keyframes boot-spin { from { stroke-dashoffset:0; transform:rotate(0deg); transform-origin:center; } to { stroke-dashoffset:-600; transform:rotate(360deg); transform-origin:center; } }
+</style>
+<body dir="ltr">
+
+<div id="boot-screen">
+  <img id="boot-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg/960px-Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg.png" alt="Windows" style="opacity:0;">
+  <div id="boot-loader-wrap" style="opacity:0;transition:opacity 0.4s ease;margin-top:0px; position:absolute; bottom:80px;">
+    <svg class="boot-loader" viewBox="0 0 50 50">
+      <circle cx="25" cy="25" r="20"/>
+    </svg>
+  </div>
+</div>
+
+<div id="lock-screen" style="background-image:url('https://wallpapercave.com/wp/wp8922801.png')">
+<div class="lock-time" id="lock-time">00:00</div>
+<div class="lock-date" id="lock-date">تحميل...</div>
+</div>
+
+<!-- OOBE شاشة الإعداد الأولي -->
+<div id="oobe-screen">
+  <!-- شاشة الانتظار -->
+  <div id="oobe-wait">
+    <div class="win10-spinner">
+      <div class="win10-spinner-dot"></div><div class="win10-spinner-dot"></div>
+      <div class="win10-spinner-dot"></div><div class="win10-spinner-dot"></div>
+      <div class="win10-spinner-dot"></div><div class="win10-spinner-dot"></div>
+      <div class="win10-spinner-dot"></div><div class="win10-spinner-dot"></div>
+    </div>
+    <div id="oobe-wait-text">لحظة واحدة</div>
+  </div>
+  <!-- فورم إنشاء الحساب -->
+  <div id="oobe-form-wrap">
+    <div class="oobe-left-panel">
+      <div class="oobe-left-title">إنشاء<br/>حساب محلي</div>
+      <div class="oobe-left-sub">يمكنك إنشاء حساب محلي خاص بهذا الجهاز. كلمة المرور اختيارية — يمكنك الدخول بدونها.</div>
+    </div>
+    <div class="oobe-right-panel">
+      <div class="oobe-right-title">من سيستخدم هذا الجهاز؟</div>
+      <div class="oobe-right-sub">أدخل اسم المستخدم وكلمة مرور اختيارية</div>
+      <div class="oobe-field">
+        <label>اسم المستخدم</label>
+        <input id="oobe-username" type="text" placeholder="" autocomplete="off" />
+        <span class="oobe-hint" id="oobe-username-err">اسم المستخدم مطلوب</span>
+      </div>
+      <div class="oobe-field">
+        <label>كلمة المرور (اختياري)</label>
+        <input id="oobe-password" type="password" autocomplete="new-password" />
+      </div>
+      <div class="oobe-field">
+        <label>تأكيد كلمة المرور</label>
+        <input id="oobe-confirm" type="password" />
+        <span class="oobe-hint" id="oobe-confirm-err">كلمتا المرور غير متطابقتين</span>
+      </div>
+      <div class="oobe-field">
+        <label>تلميح كلمة المرور (اختياري)</label>
+        <input id="oobe-hint-input" type="text" />
+      </div>
+      <button class="oobe-next-btn" id="oobe-next-btn">التالي</button>
+    </div>
+  </div>
+  <!-- شاشة القوانين -->
+  <div id="oobe-tos">
+    <div class="oobe-tos-left">
+      <div class="oobe-left-title" style="color:#fff;">الشروط والأحكام</div>
+      <div class="oobe-left-sub">يرجى قراءة هذه المعلومات قبل المتابعة</div>
+    </div>
+    <div class="oobe-tos-right">
+      <div class="oobe-tos-title">إشعار قانوني مهم</div>
+      <div class="oobe-tos-body">
+        <b>REW OS</b> هو مشروع محاكاة تعليمي وترفيهي يحاكي واجهة نظام Windows — وهو <b>غير تابع لشركة Microsoft</b> بأي شكل من الأشكال.<br/><br/>
+        جميع أسماء المنتجات والشعارات وصور الأيقونات المستخدمة في هذا المشروع هي ملك لأصحابها الأصليين، وتُستخدم هنا لأغراض المحاكاة التعليمية فقط.<br/><br/>
+        <b>جميع حقوق واجهة Windows وأيقوناتها وتصميماتها محفوظة لشركة Microsoft Corporation.</b><br/><br/>
+        هذا المشروع لا يدّعي ملكية أي من هذه العناصر، ولا يُباع أو يُوزّع بأي غرض تجاري.<br/><br/>
+        باستخدامك لهذا البرنامج، فإنك تقر بأنه محاكاة غير رسمية ولا تمثل Microsoft أو أي جهة رسمية أخرى.
+      </div>
+      <button class="oobe-next-btn" id="oobe-tos-btn" style="background:#1a6ebd;color:#fff;border:none;padding:10px 28px;font-size:0.88rem;font-family:Segoe UI,sans-serif;cursor:pointer;align-self:flex-start;">موافق، التالي</button>
+    </div>
+  </div>
+  <!-- شاشة الجاهزية -->
+  <div id="oobe-ready">
+    <div class="oobe-ready-line" id="oobe-line1">نحن نُجهّز الأشياء لك</div>
+    <div class="oobe-ready-line" id="oobe-line2">Windows مُصمَّم لحمايتك في مجتمع الويب</div>
+    <div class="oobe-ready-line" id="oobe-line3">فلنبدأ</div>
+  </div>
+</div>
+
+<!-- شاشة تسجيل الدخول -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-avatar">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="rgba(255,255,255,0.7)"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+    </div>
+    <div class="login-username" id="login-username-display">مستخدم</div>
+    <div class="login-input-wrap" id="login-input-wrap">
+      <input type="password" id="login-password-input" placeholder="كلمة المرور" />
+      <button class="login-submit" id="login-submit-btn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M10 17l5-5-5-5v10z"/></svg>
+      </button>
+    </div>
+    <div class="login-err" id="login-err">كلمة المرور غير صحيحة</div>
+    <div class="login-nopass" id="login-nopass-btn" style="display:none;">تسجيل الدخول بدون كلمة مرور</div>
+  </div>
+</div>
+
+<div id="win8-search-pane">
+<div class="search-pane-title">بحث</div>
+<div class="search-input-container">
+<input type="text" id="os-search-input" placeholder="بحث في كل مكان..." autocomplete="off">
+<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+</div>
+<div class="search-results-area" id="os-search-results">ابدأ الكتابة للبحث...</div>
+</div>
+
+<div id="uac-overlay">
+<div id="uac-dialog">
+<div class="uac-header">
+<svg viewBox="0 0 24 24" width="16" height="16" fill="white" style="margin-right:10px;"><path d="M12 2C8.13 2 5 5.13 5 9v4H4v9h16v-9h-1V9c0-3.87-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5v4H7V9c0-2.76 2.24-5 5-5z"/></svg>
+<span>التحكم في حساب المستخدم</span>
+</div>
+<div class="uac-content">
+<div style="font-size:1.05rem;margin-bottom:15px;">هل تريد السماح لهذا التطبيق بإجراء تغييرات على جهازك؟</div>
+<div class="uac-app-header">
+<div class="uac-app-icon" id="uac-app-icon-display"><svg viewBox="0 0 24 24" width="22" height="22" fill="#aaa"><path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg></div>
+<div class="uac-app-name-large" id="uac-app-name">PowerShell</div>
+</div>
+<div class="uac-info">
+<span class="uac-label">الناشر المتحقق منه:</span>
+<span class="uac-verified">REW OS</span>
+<div class="uac-spacer"></div>
+<span class="uac-label">أصل الملف:</span>
+<span class="uac-path" id="uac-app-path">C:\Windows\System32\cmd.exe</span>
+</div>
+</div>
+<div class="uac-footer">
+<button class="uac-btn yes" id="uac-yes">نعم</button>
+<button class="uac-btn no" id="uac-no">لا</button>
+</div>
+</div>
+</div>
+
+<div id="desktop-environment" style="background-image:url('https://github.com/FaisalTahaL/12345678ikjnhgfdcvbhju76t/blob/main/img4.jpg?raw=true')"></div>
+<div id="snap-preview"></div>
+<div id="snap-assist-overlay"></div>
+<div id="os-context-menu"></div>
+<div id="text-ctx-menu">
+  <div class="tctx-item" id="tctx-copy">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+    نسخ
+  </div>
+  <div class="tctx-item" id="tctx-cut">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M9.64 7.64c.23-.5.36-1.05.36-1.64 0-2.21-1.79-4-4-4S2 3.79 2 6s1.79 4 4 4c.59 0 1.14-.13 1.64-.36L10 12l-2.36 2.36C7.14 14.13 6.59 14 6 14c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4c0-.59-.13-1.14-.36-1.64L12 14l7 7h3v-1L9.64 7.64zM6 8c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm0 12c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm6-7.5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5.5.22.5.5-.22.5-.5.5zM19 3l-6 6 2 2 7-7V3z"/></svg>
+    قص
+  </div>
+  <div class="tctx-item" id="tctx-paste">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
+    لصق
+  </div>
+  <div class="tctx-item" id="tctx-selall">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 8h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm2 18h2v-2h-2v2zm8-8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2zm0-12h2V7h-2v2zm0 8h2v-2h-2v2zm-4 4h2v-2h-2v2zm0-16h2V3h-2v2zM7 17h10V7H7v10z"/></svg>
+    تحديد الكل
+  </div>
+</div>
+<div id="clock-popup">
+  <div class="clock-popup-time" id="cp-time">00:00</div>
+  <div class="clock-popup-date" id="cp-date">الإثنين، ١ يناير ٢٠٢٥</div>
+  <div id="cal-scroll-wrap" style="overflow-y:auto;max-height:220px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.15) transparent;">
+    <div class="cal-header">
+      <div class="cal-nav" id="cal-prev">‹</div>
+      <div id="cal-month-label">يناير ٢٠٢٥</div>
+      <div class="cal-nav" id="cal-next">›</div>
+    </div>
+    <div class="cal-viewport">
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div id="start-ctx-menu">
+  <div class="sctx-item" id="sctx-power" onclick="Kernel.showPowerFromCtx()">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="#aaa"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+    خيارات الطاقة
+  </div>
+  <div class="sctx-item" id="sctx-explorer" onclick="Kernel.launchApp('explorer');Kernel.closeStartCtx()">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="#aaa"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+    مستكشف الملفات
+  </div>
+  <div class="sctx-item" id="sctx-settings" onclick="Kernel.launchApp('settings');Kernel.closeStartCtx()">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="#aaa"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+    الإعدادات
+  </div>
+  <div class="sctx-sep" id="sctx-sep1"></div>
+  <div class="sctx-item" id="sctx-cmd-admin" onclick="Kernel.requestAdminPrivileges('cmd');Kernel.closeStartCtx()">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="#aaa"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+    PowerShell (مسؤول)
+  </div>
+  <div class="sctx-item" id="sctx-cmd" onclick="Kernel.launchApp('cmd');Kernel.closeStartCtx()">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="#aaa"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+    PowerShell
+  </div>
+  <div class="sctx-item" id="sctx-control" onclick="Kernel.launchApp('control');Kernel.closeStartCtx()">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="#aaa"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+    لوحة التحكم
+  </div>
+  <div class="sctx-item" id="sctx-trouble" onclick="Kernel.launchApp('troubleshoot');Kernel.closeStartCtx()">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="#aaa"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+    مستكشف الأخطاء وإصلاحها
+  </div>
+  <div class="sctx-item" id="sctx-allapps" onclick="Kernel.showAllAppsWindow();Kernel.closeStartCtx()">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="#aaa"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+    التطبيقات المثبتة
+  </div>
+</div>
+
+<div id="start-menu">
+<div class="start-resizer resizer-top" id="sm-resize-t"></div>
+<div class="start-resizer resizer-right" id="sm-resize-r"></div>
+<div class="start-resizer resizer-tr" id="sm-resize-tr"></div>
+<div class="start-sidebar" id="start-sidebar">
+<div class="start-sidebar-top" id="start-sidebar-label">
+  <div class="sidebar-hamburger"><span></span><span></span><span></span></div>
+  <span class="sidebar-expand-label">ابدأ</span>
+</div>
+<div class="start-sidebar-spacer"></div>
+<div class="sidebar-btn" onclick="Kernel.launchApp('settings');document.getElementById('start-menu').classList.remove('show');">
+  <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.22.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+  <span class="sidebar-btn-label">الإعدادات</span>
+</div>
+<div class="sidebar-btn" id="power-btn-main">
+  <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+  <span class="sidebar-btn-label">الطاقة</span>
+</div>
+</div>
+<div class="start-body">
+<div class="start-apps-list" id="start-list"></div>
+<div class="start-tiles-container">
+<div class="tiles-group-title">التطبيقات المثبتة</div>
+<div class="tiles-grid" id="start-tiles-grid"></div>
+</div>
+</div>
+</div>
+
+<div id="taskbar">
+<div id="start-btn"><img src="https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/8355c42b-bec4-426e-a0fa-f39523ea6c02/da7v7y8-52d76d93-ab94-4015-903a-7b9be668b252.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi84MzU1YzQyYi1iZWM0LTQyNmUtYTBmYS1mMzk1MjNlYTZjMDIvZGE3djd5OC01MmQ3NmQ5My1hYjk0LTQwMTUtOTAzYS03YjliZTY2OGIyNTIucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.j5Z8eRxUX79o0NB7aJDiyNcHl2HB0QtsABu4jJbyYDo" class="win-logo-img" alt="Start"></div>
+<div id="search-btn" title="بحث"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></div>
+<div id="taskbar-pinned"></div>
+<div id="taskbar-apps"></div>
+<div class="system-tray"><div class="tray-icon" title="Network"><img src="https://cdn-icons-png.flaticon.com/512/1176/1176875.png" style="transform:scaleX(-1);filter:invert(1);"></div></div>
+<div class="taskbar-clock" id="taskbar-clock-btn" style="cursor:pointer;" title="التقويم"><div id="tb-time">00:00</div><div id="tb-date">00/00/0000</div></div>
+<div id="show-desktop-btn" title="Show Desktop"></div>
+</div>
+
+<script>
+"use strict";
+/*
+ * ┌─────────────────────────────────────────────────┐
+ * │  REW OS  ·  Kernel v9.0                         │
+ * │  Author  :  Faisal SS505                         │
+ * │  Year    :  2025                                 │
+ * │  All rights reserved. Do not redistribute.      │
+ * └─────────────────────────────────────────────────┘
+ */
+const APPS_DATA = [
+{ id: 'settings', name: 'الإعدادات', icon: '<img src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Windows_Settings_icon.svg" style="width:22px;height:22px;object-fit:contain;">' },
+{ id: 'explorer', name: 'مستكشف الملفات', icon: '<img src="https://upload.wikimedia.org/wikipedia/commons/6/6f/Microsoft_PowerToys-Logo_File_Explorer_Preview_02.png" style="width:22px;height:22px;object-fit:contain;">' },
+{ id: 'cmd', name: 'PowerShell', icon: '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Powershell_128.svg/250px-Powershell_128.svg.png" style="width:22px;height:22px;object-fit:contain;">' },
+{ id: 'taskmgr', name: 'مدير المهام', icon: '<img src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Windows_11_TASKMGR.png?_=20241225151854" style="width:22px;height:22px;object-fit:contain;">' },
+{ id: 'control', name: 'لوحة التحكم', icon: '<img src="https://upload.wikimedia.org/wikipedia/ar/a/a6/%D8%B4%D8%B9%D8%A7%D8%B1_%D9%84%D9%88%D8%AD%D8%A9_%D8%AA%D8%AD%D9%83%D9%85_%D9%88%D9%8A%D9%86%D8%AF%D9%88%D8%B2.png" style="width:22px;height:22px;object-fit:contain;">' },
+{ id: 'security', name: 'أمن ويندوز', icon: '<img src="https://upload.wikimedia.org/wikipedia/commons/8/85/Microsoft_Defender_2020_Fluent_Design_icon.png?_=20201230061004" style="width:22px;height:22px;object-fit:contain;">' },
+{ id: 'ie', name: 'Internet Explorer', icon: '<img src="https://upload.wikimedia.org/wikipedia/commons/1/18/Internet_Explorer_10%2B11_logo.svg" style="width:22px;height:22px;object-fit:contain;">' },
+{ id: 'winfeatures', name: 'ميزات Windows', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="#aaa"><path d="M20 3H4a2 2 0 00-2 2v14a2 2 0 002 2h16a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H4V8h16v11zm0-13H4V5h16v1z"/></svg>' },
+{ id: 'troubleshoot', name: 'مستكشف الأخطاء وإصلاحها', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="#aaa"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>' },
+{ id: 'clockapp', name: 'الساعة والتقويم', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="#aaa"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>' },
+{ id: 'appbuilder', name: 'App Builder', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="#aaa"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>' }
+];
+const DEFAULT_PINNED = ['explorer', 'cmd', 'settings'];
+
+// ── OSKernel ── Core system engine © Faisal SS505 ──
+class OSKernel {
+constructor() { this.topZ=100; this.windows=new Map(); this.pinnedTiles=[]; this.pinnedTaskbar=[...DEFAULT_PINNED];
+  this.sessionStart=parseInt(sessionStorage.getItem('rewos_session_start')||'0');
+  // تحميل الحساب المحلي
+  const savedAcc=localStorage.getItem('rewos_account');
+  this.account=savedAcc?JSON.parse(savedAcc):null;
+  const saved=JSON.parse(sessionStorage.getItem('rewos_features')||'{}');
+  this.features={ searchEnabled: saved.searchEnabled!==undefined?saved.searchEnabled:true, ieEnabled: saved.ieEnabled!==undefined?saved.ieEnabled:true };
+  this.boot(); }
+boot() { this.initClock(); this.initLockScreen(); this.initTaskbar(); this.initStartMenuResizing(); this.initTilesArea(); this.initDesktop(); this.initGlobalEvents(); this.renderPinnedTaskbar(); this.applyFeatures(); this.loadCustomApps(); }
+
+showTextCtxMenu(x,y,target) {
+  const menu=document.getElementById('text-ctx-menu');
+  menu.style.display='block';
+  // تأكد من بقاءه داخل الشاشة
+  const mw=150, mh=130;
+  menu.style.left=Math.min(x,window.innerWidth-mw)+'px';
+  menu.style.top=Math.min(y,window.innerHeight-mh)+'px';
+  // نسخ
+  document.getElementById('tctx-copy').onclick=()=>{
+    const sel=target.value.substring(target.selectionStart,target.selectionEnd);
+    if(sel) navigator.clipboard.writeText(sel).catch(()=>{});
+    menu.style.display='none';
+  };
+  // قص
+  document.getElementById('tctx-cut').onclick=()=>{
+    const s=target.selectionStart,e=target.selectionEnd;
+    const sel=target.value.substring(s,e);
+    if(sel){ navigator.clipboard.writeText(sel).catch(()=>{}); target.value=target.value.substring(0,s)+target.value.substring(e); target.selectionStart=target.selectionEnd=s; }
+    menu.style.display='none';
+  };
+  // لصق
+  document.getElementById('tctx-paste').onclick=()=>{
+    navigator.clipboard.readText().then(txt=>{
+      const s=target.selectionStart,e=target.selectionEnd;
+      target.value=target.value.substring(0,s)+txt+target.value.substring(e);
+      target.selectionStart=target.selectionEnd=s+txt.length;
+      target.focus();
+    }).catch(()=>{});
+    menu.style.display='none';
+  };
+  // تحديد الكل
+  document.getElementById('tctx-selall').onclick=()=>{
+    target.select(); target.focus();
+    menu.style.display='none';
+  };
+}
+closeStartCtx() {
+  const menu=document.getElementById('start-ctx-menu');
+  menu.querySelectorAll('.sctx-item,.sctx-sep').forEach(i=>i.classList.remove('visible'));
+  setTimeout(()=>menu.classList.remove('show'),180);
+}
+showPowerFromCtx() {
+  this.closeStartCtx();
+  const pp=document.getElementById('power-popup');
+  pp.style.display='flex';
+}
+showAllAppsWindow() {
+  // نافذة بجميع التطبيقات
+  const allApp={id:'allapps_'+Date.now(),name:'التطبيقات المثبتة',icon:'<svg viewBox="0 0 24 24" width="18" height="18" fill="#aaa"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>'};
+  const win=this.launchCustomApp(allApp);
+  // بناء المحتوى
+  setTimeout(()=>{
+    const content=win.el.querySelector('.window-content');
+    if(!content)return;
+    content.style.padding='0';
+    content.style.overflow='hidden';
+    const apps=APPS_DATA.filter(a=>!a._hidden);
+    let html=`<div style="height:100%;display:flex;flex-direction:column;font-family:Segoe UI,sans-serif;background:rgba(18,18,28,0.98);">
+    <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08);font-size:0.8rem;color:#8ab4f8;">كل التطبيقات (${apps.length})</div>
+    <div style="flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;align-content:start;">`;
+    apps.forEach(a=>{
+      html+=`<div onclick="Kernel.launchApp('${a.id}')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;cursor:pointer;border-radius:4px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">
+        <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;">${a.icon}</div>
+        <div style="font-size:0.68rem;color:#ccc;text-align:center;line-height:1.3;word-break:break-word;">${a.name}</div>
+      </div>`;
+    });
+    html+=`</div></div>`;
+    content.innerHTML=html;
+  },50);
+}
+loadCustomApps() {
+  const saved=JSON.parse(sessionStorage.getItem('rewos_custom_apps')||'[]');
+  saved.forEach(a=>{
+    if(APPS_DATA.find(x=>x.id===a.id))return;
+    const icon=a.icon?`<img src="${a.icon}" style="width:20px;height:20px;object-fit:contain;" onerror="this.style.display='none'">`:'<svg viewBox="0 0 24 24" width="20" height="20" fill="#8ab4f8"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>';
+    const app={id:a.id,name:a.name,icon,_webCode:a.code,_custom:true};
+    APPS_DATA.push(app);
+    if(a.pinTaskbar&&!this.pinnedTaskbar.includes(a.id))this.pinnedTaskbar.push(a.id);
+    if(a.pinDesktop)this.addDesktopShortcut(app);
+    if(a.pinStart&&!this.pinnedTiles.includes(a.id))this.pinnedTiles.push(a.id);
+  });
+  if(saved.length>0){this.renderPinnedTaskbar();this.syncTaskbar();}
+}
+applyFeatures() {
+  // تطبيق حالة البحث
+  const searchBtn=document.getElementById('search-btn');
+  if(searchBtn) searchBtn.style.display=this.features.searchEnabled?'flex':'none';
+  // تطبيق حالة IE - إخفاء/إظهار من APPS_DATA للبحث
+  const ieApp=APPS_DATA.find(a=>a.id==='ie');
+  if(ieApp) ieApp._hidden=!this.features.ieEnabled;
+}
+
+restartExplorer() {
+  const taskbar=document.getElementById('taskbar');
+  const startMenu=document.getElementById('start-menu');
+  const desktop=document.getElementById('desktop-environment');
+  [taskbar,startMenu,desktop].forEach(el=>{ if(el) el.style.opacity='0'; });
+  setTimeout(()=>{
+    [taskbar,startMenu,desktop].forEach(el=>{ if(el){ el.style.transition='opacity 0.5s'; el.style.opacity='1'; } });
+    setTimeout(()=>{ [taskbar,startMenu,desktop].forEach(el=>{ if(el) el.style.transition=''; }); },600);
+  },1200);
+}
+
+softRestart() {
+  const pp=document.getElementById('power-popup');
+  if(pp) pp.style.display='none';
+  document.getElementById('start-menu').classList.remove('show');
+  document.body.style.cursor='none';
+
+  // شاشة سوداء بكلمة فقط
+  const overlay=document.createElement('div');
+  overlay.id='restart-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:#000;z-index:999999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML='<div style="color:#fff;font-size:1.1rem;font-weight:300;font-family:Segoe UI,sans-serif;letter-spacing:1px;">جارٍ إعادة التشغيل...</div>';
+  document.body.appendChild(overlay);
+
+  // بعد 3 ثواني — مسح النوافذ وشاشة الإقلاع
+  setTimeout(()=>{
+    this.windows.forEach(w=>{ try{ w.el.remove(); }catch(e){} });
+    this.windows.clear();
+    overlay.remove();
+    const boot=document.getElementById('boot-screen');
+    const logo=document.getElementById('boot-logo');
+    const loader=document.getElementById('boot-loader-wrap');
+    boot.style.display='flex'; boot.classList.remove('fade-out'); boot.style.opacity='1';
+    if(logo){ logo.style.opacity='0'; setTimeout(()=>logo.style.opacity='1',1000); }
+    if(loader){ loader.style.opacity='0'; setTimeout(()=>loader.style.opacity='1',2000); }
+    this.boot();
+    // بعد 5 ثواني إضافية (= 8 ثواني كلياً) يخفي الإقلاع ويطلع شاشة القفل
+    setTimeout(()=>{
+      boot.style.transition='opacity 0.4s ease';
+      boot.classList.add('fade-out');
+      setTimeout(()=>{
+        boot.style.display='none';
+        document.body.style.cursor='';
+        if(this.account){ this.showLoginScreen(); }
+        else {
+          const ls=document.getElementById('lock-screen');
+          if(ls){ ls.style.display='flex'; ls.style.opacity='1'; ls.style.transform='translateY(0)'; ls.style.transition='none'; }
+        }
+      },400);
+    },5000);
+  },3000);
+}
+
+winFeaturesRestart(isAdding) {
+  // احفظ الحالة في sessionStorage قبل إعادة التشغيل
+  sessionStorage.setItem('rewos_features', JSON.stringify(this.features));
+  // احفظ باقي الإعدادات
+  sessionStorage.setItem('rewos_bg_desktop', document.getElementById('desktop-environment').style.backgroundImage);
+  sessionStorage.setItem('rewos_bg_lock', document.getElementById('lock-screen').style.backgroundImage);
+  sessionStorage.setItem('rewos_lang', this.osLang);
+  sessionStorage.setItem('rewos_timefmt', this.timeFormat);
+  // أغلق كل النوافذ
+  document.getElementById('start-menu').classList.remove('show');
+  this.windows.forEach(w=>w.el.remove()); this.windows.clear();
+  // شاشة إعادة التشغيل
+  const overlay=document.createElement('div');
+  overlay.id='winfeatures-restart';
+  const msg=isAdding?'يتم الآن إضافة الميزات لك\nيرجى عدم إيقاف التشغيل':'يتم الآن إزالة ميزات من طلبك\nيرجى عدم إيقاف التشغيل';
+  overlay.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000;color:white;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:999999;font-family:Segoe UI,sans-serif;';
+  overlay.innerHTML='<div id="wf-restarting" style="font-size:1.5rem;font-weight:300;color:#fff;">جارٍ إعادة التشغيل...</div>'
+    +'<div id="wf-msg" style="font-size:1.1rem;font-weight:300;text-align:center;white-space:pre-line;line-height:2;color:#ccc;opacity:0;transition:opacity 0.5s ease;margin-top:30px;">'+msg+'</div>'
+    +'<div style="margin-top:40px;width:200px;height:3px;background:rgba(255,255,255,0.15);overflow:hidden;opacity:0;transition:opacity 0.5s ease;" id="wf-bar-wrap"><div id="wf-progress" style="height:100%;background:#fff;width:0%;transition:width 5s linear;"></div></div>';
+  document.body.appendChild(overlay);
+  // بعد 2 ثانية تظهر الرسالة وشريط التقدم
+  setTimeout(()=>{
+    document.getElementById('wf-msg').style.opacity='1';
+    const barWrap=document.getElementById('wf-bar-wrap');
+    barWrap.style.opacity='1';
+    requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ document.getElementById('wf-progress').style.width='100%'; }); });
+  },2000);
+  // بعد 5 ثوان → شاشة سوداء 3 ثوان → إقلاع
+  setTimeout(()=>{
+    overlay.style.background='#000'; overlay.innerHTML='';
+    setTimeout(()=>{
+      overlay.remove();
+      // إعادة تهيئة كاملة مع الحفاظ على الإعدادات
+      const bgDesk=sessionStorage.getItem('rewos_bg_desktop');
+      const bgLock=sessionStorage.getItem('rewos_bg_lock');
+      const lang=sessionStorage.getItem('rewos_lang')||'ar';
+      const timefmt=sessionStorage.getItem('rewos_timefmt')||'24';
+      if(bgDesk)document.getElementById('desktop-environment').style.backgroundImage=bgDesk;
+      if(bgLock)document.getElementById('lock-screen').style.backgroundImage=bgLock;
+      // أعد تشغيل شاشة الإقلاع
+      const boot=document.getElementById('boot-screen');
+      const logo=document.getElementById('boot-logo');
+      const loader=document.getElementById('boot-loader-wrap');
+      logo.style.opacity='0'; loader.style.opacity='0';
+      document.body.style.cursor='none'; boot.style.display='flex'; boot.classList.remove('fade-out'); boot.style.opacity='1';
+      // أعد تهيئة الـ Kernel
+      window.Kernel=new OSKernel();
+      window.Kernel.osLang=lang; window.Kernel.timeFormat=timefmt;
+      // تسلسل الإقلاع
+      setTimeout(()=>logo.style.opacity='1',0);
+      setTimeout(()=>loader.style.opacity='1',1000);
+      setTimeout(()=>{ boot.style.transition='opacity 0.25s ease'; boot.classList.add('fade-out'); setTimeout(()=>{ boot.style.display='none'; document.body.style.cursor=''; },250); },4100);
+      // أعد إظهار شاشة القفل
+      const ls=document.getElementById('lock-screen');
+      ls.style.display='flex'; ls.style.transform='translateY(0)'; ls.style.transition='none';
+    },3000);
+  },5000);
+}
+
+renderPinnedTaskbar() {
+  const container = document.getElementById('taskbar-pinned');
+  container.innerHTML = '';
+  this.pinnedTaskbar.forEach(id => {
+    const app = APPS_DATA.find(a => a.id === id);
+    if (!app) return;
+    const btn = document.createElement('div');
+    btn.className = 'tb-pinned-icon'; btn.id = `pinned-${id}`;
+    btn.innerHTML = `${app.icon}<div class="tb-tooltip">${app.name}</div>`;
+    btn.onclick = (e) => { e.stopPropagation(); const win = this.windows.get(id); if (win) { win.minimized ? win.restore() : win.minimize(); } else { this.launchApp(id); } };
+    btn.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); this.showPinnedContextMenu(e.clientX, e.clientY, app); };
+    container.appendChild(btn);
+  });
+  this.syncPinnedState();
+}
+
+syncPinnedState() {
+  this.pinnedTaskbar.forEach(id => {
+    const btn = document.getElementById(`pinned-${id}`);
+    if (!btn) return;
+    const win = this.windows.get(id);
+    btn.classList.remove('running','active','minimized-win');
+    if (win && !win.minimized) btn.classList.add('active');
+    else if (win && win.minimized) btn.classList.add('minimized-win');
+  });
+}
+
+pinToTaskbar(id) { if (!this.pinnedTaskbar.includes(id)) { this.pinnedTaskbar.push(id); this.renderPinnedTaskbar(); } }
+unpinFromTaskbar(id) { this.pinnedTaskbar = this.pinnedTaskbar.filter(i => i !== id); this.renderPinnedTaskbar(); }
+
+showPinnedContextMenu(x, y, app) {
+  const menu = document.getElementById('os-context-menu');
+  menu.style.display='block'; menu.style.left=x+'px'; menu.style.top=y+'px';
+  menu.innerHTML = `<div class="context-item" onclick="Kernel.launchApp('${app.id}')">تشغيل</div><div class="context-item admin" style="color:#d32f2f;" onclick="Kernel.unpinFromTaskbar('${app.id}')">إلغاء التثبيت من شريط المهام</div>`;
+}
+
+initStartMenuResizing() {
+  const sm=document.getElementById('start-menu'), rsT=document.getElementById('sm-resize-t'), rsR=document.getElementById('sm-resize-r'), rsTR=document.getElementById('sm-resize-tr');
+  let isResizing=false, type='';
+  const mousedown=(e,rType)=>{isResizing=true;type=rType;document.body.style.cursor=window.getComputedStyle(e.target).cursor;e.preventDefault();};
+  rsT.onmousedown=(e)=>mousedown(e,'top'); rsR.onmousedown=(e)=>mousedown(e,'right'); rsTR.onmousedown=(e)=>mousedown(e,'both');
+  window.addEventListener('mousemove',(e)=>{if(!isResizing)return;if(type==='right'||type==='both'){let newW=e.clientX;if(newW>800)newW=800;if(newW<300)newW=300;sm.style.width=newW+'px';if(newW<400)sm.classList.remove('expanded');else sm.classList.add('expanded');}if(type==='top'||type==='both'){let newH=window.innerHeight-e.clientY;if(newH>window.innerHeight*0.9)newH=window.innerHeight*0.9;if(newH<400)newH=400;sm.style.height=newH+'px';}});
+  window.addEventListener('mouseup',()=>{if(isResizing){isResizing=false;document.body.style.cursor='default';}});
+}
+
+initTilesArea() {
+  const tilesGrid=document.getElementById('start-tiles-grid');
+  tilesGrid.addEventListener('dragover',e=>{e.preventDefault();tilesGrid.classList.add('drag-over');});
+  tilesGrid.addEventListener('dragleave',()=>tilesGrid.classList.remove('drag-over'));
+  tilesGrid.addEventListener('drop',e=>{e.preventDefault();tilesGrid.classList.remove('drag-over');const appId=e.dataTransfer.getData('text/plain');if(appId&&!this.pinnedTiles.includes(appId)){this.pinnedTiles.push(appId);this.renderTiles();}});
+}
+
+renderTiles() {
+  const grid=document.getElementById('start-tiles-grid'); grid.innerHTML='';
+  this.pinnedTiles.forEach(id=>{const app=APPS_DATA.find(a=>a.id===id);if(!app)return;const tile=document.createElement('div');tile.className='metro-tile';tile.innerHTML=`<div class="tile-icon">${app.icon}</div><div class="tile-name">${app.name}</div>`;tile.onclick=(e)=>{e.stopPropagation();this.launchApp(app.id);document.getElementById('start-menu').classList.remove('show');};tile.oncontextmenu=(e)=>{e.preventDefault();e.stopPropagation();this.showContextMenu(e.clientX,e.clientY,app,true);};grid.appendChild(tile);});
+}
+
+initClock() {
+  this.timeFormat = '24';
+  this.osLang = 'ar';
+  const langMap = { ar: 'ar-SA', en: 'en-US', zh: 'zh-CN' };
+  const update = () => {
+    const now = new Date();
+    const lc = langMap[this.osLang] || 'ar-SA';
+    const is12 = this.timeFormat === '12';
+    const timeStr = now.toLocaleTimeString(lc, { hour:'2-digit', minute:'2-digit', hour12: is12 });
+    const dateStr = now.toLocaleDateString(lc, { weekday:'long', month:'long', day:'numeric' });
+    document.getElementById('lock-time').textContent = timeStr;
+    document.getElementById('lock-date').textContent = dateStr;
+    document.getElementById('tb-time').textContent = timeStr;
+    document.getElementById('tb-date').textContent = now.toLocaleDateString(lc);
+    const cp = document.getElementById('cp-time');
+    const cd = document.getElementById('cp-date');
+    if(cp) cp.textContent = timeStr;
+    if(cd) cd.textContent = now.toLocaleDateString(lc, { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  };
+  update(); setInterval(update, 1000);
+  // Calendar
+  this.calDate = new Date();
+  this.renderCalendar();
+  document.getElementById('cal-prev').onclick = (e) => { e.stopPropagation(); this.calDate.setMonth(this.calDate.getMonth()-1); this.renderCalendar(1); };
+  document.getElementById('cal-next').onclick = (e) => { e.stopPropagation(); this.calDate.setMonth(this.calDate.getMonth()+1); this.renderCalendar(-1); };
+  // سحب التقويم يميناً/يساراً
+  const wrap = document.getElementById('cal-scroll-wrap');
+  let dragStartX=0, dragging=false, moved=false;
+  wrap.addEventListener('pointerdown',(e)=>{ dragStartX=e.clientX; dragging=true; moved=false; wrap.setPointerCapture(e.pointerId); });
+  wrap.addEventListener('pointermove',(e)=>{ if(!dragging)return; if(Math.abs(e.clientX-dragStartX)>5) moved=true; });
+  wrap.addEventListener('pointerup',(e)=>{
+    if(!dragging)return; dragging=false;
+    const diff=e.clientX-dragStartX;
+    if(Math.abs(diff)>40){
+      if(diff<0){ this.calDate.setMonth(this.calDate.getMonth()+1); this.renderCalendar(-1); }
+      else      { this.calDate.setMonth(this.calDate.getMonth()-1); this.renderCalendar(1); }
+    }
+  });
+  // Clock button
+  const clockBtn = document.getElementById('taskbar-clock-btn');
+  const clockPopup = document.getElementById('clock-popup');
+  clockBtn.onclick = (e) => { e.stopPropagation(); clockPopup.classList.toggle('show'); };
+}
+
+renderCalendar(dir=0) {
+  const d = this.calDate;
+  const year = d.getFullYear(), month = d.getMonth();
+  const today = new Date();
+  const langMap = { ar: 'ar-SA', en: 'en-US', zh: 'zh-CN' };
+  const lang = langMap[this.osLang] || 'ar-SA';
+  document.getElementById('cal-month-label').textContent = new Date(year,month,1).toLocaleDateString(lang, {month:'long', year:'numeric'});
+  const oldGrid = document.getElementById('cal-grid');
+  const viewport = oldGrid.parentElement;
+  const dayNames = this.osLang==='ar' ? ['ح','ن','ث','ر','خ','ج','س'] : this.osLang==='zh' ? ['日','一','二','三','四','五','六'] : ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  let html = dayNames.map(n=>`<div class="cal-day-name">${n}</div>`).join('');
+  const first = new Date(year,month,1).getDay();
+  const days = new Date(year,month+1,0).getDate();
+  const prevDays = new Date(year,month,0).getDate();
+  for(let i=0;i<first;i++) html+=`<div class="cal-day other-month">${prevDays-first+1+i}</div>`;
+  for(let i=1;i<=days;i++){
+    const isToday = i===today.getDate()&&month===today.getMonth()&&year===today.getFullYear();
+    html+=`<div class="cal-day${isToday?' today':''}">${i}</div>`;
+  }
+  const rem=(first+days)%7; if(rem>0){for(let i=1;i<=7-rem;i++)html+=`<div class="cal-day other-month">${i}</div>`;}
+  if(dir===0){ oldGrid.innerHTML=html; return; }
+  // انيميشن slide
+  const newGrid=document.createElement('div');
+  newGrid.className='cal-grid';
+  newGrid.innerHTML=html;
+  newGrid.id='cal-grid';
+  // اتجاه: للأمام (dir>0) ← يجي من اليمين، للخلف (dir<0) ← يجي من اليسار
+  const inClass  = dir>0 ? 'slide-in-right'  : 'slide-in-left';
+  const outClass = dir>0 ? 'slide-out-left'  : 'slide-out-right';
+  oldGrid.classList.add(outClass);
+  setTimeout(()=>{
+    oldGrid.remove();
+    viewport.appendChild(newGrid);
+    newGrid.classList.add(inClass);
+  },180);
+}
+
+initLockScreen() {
+  const ls=document.getElementById('lock-screen');let startY=0,currentY=0,isDragging=false;
+  const unlock=()=>{ls.style.transition='transform 0.7s var(--anim-curve)';ls.style.transform='translateY(-100%)';setTimeout(()=>ls.style.display='none',700);};
+  ls.addEventListener('pointerdown',e=>{if(ls.style.display==='none')return;startY=e.clientY-currentY;isDragging=true;ls.style.transition='none';ls.setPointerCapture(e.pointerId);});
+  window.addEventListener('pointermove',e=>{if(!isDragging)return;let diff=e.clientY-startY;if(diff<0){currentY=diff;ls.style.transform=`translateY(${currentY}px)`;}});
+  window.addEventListener('pointerup',()=>{if(!isDragging)return;isDragging=false;if(Math.abs(currentY)>150)unlock();else{ls.style.transition='transform 0.5s var(--anim-curve)';currentY=0;ls.style.transform='translateY(0)';}});
+}
+
+initOOBE() {
+  const oobe=document.getElementById('oobe-screen');
+  const wait=document.getElementById('oobe-wait');
+  const formWrap=document.getElementById('oobe-form-wrap');
+  const tosWrap=document.getElementById('oobe-tos');
+  const readyWrap=document.getElementById('oobe-ready');
+  oobe.style.display='flex';
+
+  const switchTo=(hide,show)=>{
+    hide.style.transition='opacity 0.35s ease'; hide.style.opacity='0';
+    setTimeout(()=>{ hide.style.display='none'; show.style.display='flex'; show.style.opacity='0';
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{ show.style.transition='opacity 0.35s ease'; show.style.opacity='1'; }));
+    },350);
+  };
+
+  // بعد 5 ثوان → فورم
+  setTimeout(()=>switchTo(wait,formWrap),5000);
+  setTimeout(()=>document.getElementById('oobe-username').focus(),5400);
+
+  // زر التالي في الفورم → القوانين
+  const doNext=()=>{
+    const username=document.getElementById('oobe-username').value.trim();
+    const pass=document.getElementById('oobe-password').value;
+    const confirm=document.getElementById('oobe-confirm').value;
+    const hint=document.getElementById('oobe-hint-input').value.trim();
+    let ok=true;
+    document.getElementById('oobe-username-err').style.display='none';
+    document.getElementById('oobe-confirm-err').style.display='none';
+    if(!username){ document.getElementById('oobe-username-err').style.display='block'; ok=false; }
+    if(pass&&pass!==confirm){ document.getElementById('oobe-confirm-err').style.display='block'; ok=false; }
+    if(!ok)return;
+    // حفظ الحساب في localStorage
+    const account={username,password:pass,hint,created:Date.now()};
+    localStorage.setItem('rewos_account',JSON.stringify(account));
+    this.account=account;
+    switchTo(formWrap,tosWrap);
+  };
+  document.getElementById('oobe-next-btn').onclick=doNext;
+  document.addEventListener('keydown',function oobeKey(e){
+    if(formWrap.style.display==='flex'&&e.key==='Enter'){ doNext(); }
+  });
+
+  // زر موافق في القوانين → شاشة الجاهزية
+  document.getElementById('oobe-tos-btn').onclick=()=>{
+    switchTo(tosWrap,readyWrap);
+    // ظهور الأسطر
+    const lines=['oobe-line1','oobe-line2','oobe-line3'];
+    const delays=[400,3400,7400];
+    lines.forEach((id,i)=>{
+      setTimeout(()=>{
+        document.getElementById(id).style.opacity='1';
+      },delays[i]);
+    });
+    // بعد "فلنبدأ" تظهر 1.5 ثانية ثم الشاشة السوداء تختفي بسرعة ثم بطء → سطح المكتب
+    setTimeout(()=>{
+      readyWrap.style.transition='opacity 0.15s ease';
+      readyWrap.style.opacity='0.8';
+      setTimeout(()=>{
+        readyWrap.style.transition='opacity 0.7s cubic-bezier(0.8,0,1,1)';
+        readyWrap.style.opacity='0';
+        setTimeout(()=>{
+          oobe.style.display='none';
+          this.sessionStart=Date.now();
+          sessionStorage.setItem('rewos_session_start',this.sessionStart);
+        },750);
+      },200);
+    },9200);
+  };
+}
+
+showLoginScreen() {
+  const acc=this.account;
+  const ls=document.getElementById('login-screen');
+  // خلفية نفس شاشة القفل
+  const lockBg=document.getElementById('lock-screen').style.backgroundImage;
+  if(lockBg) ls.style.backgroundImage=lockBg;
+  document.getElementById('login-username-display').textContent=acc.username;
+  const inputWrap=document.getElementById('login-input-wrap');
+  const nopassBtn=document.getElementById('login-nopass-btn');
+  // لو ما عنده كلمة مرور
+  if(!acc.password){
+    inputWrap.style.display='none';
+    nopassBtn.style.display='block';
+    nopassBtn.onclick=()=>this.completeLogin();
+  } else {
+    inputWrap.style.display='flex';
+    nopassBtn.style.display='none';
+    const doLogin=()=>{
+      const val=document.getElementById('login-password-input').value;
+      if(val===acc.password){ document.getElementById('login-err').style.display='none'; this.completeLogin(); }
+      else { document.getElementById('login-err').style.display='block'; document.getElementById('login-password-input').value=''; document.getElementById('login-password-input').focus(); }
+    };
+    document.getElementById('login-submit-btn').onclick=doLogin;
+    document.getElementById('login-password-input').onkeydown=e=>{ if(e.key==='Enter') doLogin(); };
+  }
+  ls.style.display='flex';
+  ls.style.opacity='0';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ ls.style.transition='opacity 0.6s ease'; ls.style.opacity='1'; }));
+}
+
+completeLogin() {
+  const ls=document.getElementById('login-screen');
+  ls.style.transition='opacity 0.4s ease'; ls.style.opacity='0';
+  setTimeout(()=>{ ls.style.display='none'; },400);
+  // تأكيد الجلسة — الحساب موجود في localStorage ويظل بعد إعادة التشغيل
+  this.sessionStart=Date.now();
+  sessionStorage.setItem('rewos_session_start',this.sessionStart);
+  sessionStorage.setItem('rewos_logged_in','1');
+}
+
+lockSession() {
+  document.getElementById('start-menu').classList.remove('show');
+  if(this.account){ this.showLoginScreen(); }
+  else { const ls=document.getElementById('lock-screen');ls.style.display='flex';requestAnimationFrame(()=>{ls.style.transition='transform 0.5s var(--anim-curve)';ls.style.transform='translateY(0)';}); }
+}
+
+initTaskbar() {
+  const startBtn=document.getElementById('start-btn'),startMenu=document.getElementById('start-menu'),searchBtn=document.getElementById('search-btn'),searchPane=document.getElementById('win8-search-pane'),searchInput=document.getElementById('os-search-input'),powerBtn=document.getElementById('power-btn-main'),powerPopup=document.getElementById('power-popup');
+  startBtn.onclick=e=>{e.stopPropagation();searchPane.classList.remove('show');startMenu.classList.toggle('show');if(startMenu.classList.contains('show')){this.renderAppList(APPS_DATA);this.renderTiles();}};
+
+  // كليك يمين على شعار ابدأ
+  startBtn.addEventListener('contextmenu',e=>{
+    e.preventDefault(); e.stopPropagation();
+    startMenu.classList.remove('show');
+    const menu=document.getElementById('start-ctx-menu');
+    const items=menu.querySelectorAll('.sctx-item,.sctx-sep');
+    items.forEach(i=>{ i.classList.remove('visible'); });
+    // تحديد الموقع
+    const tb=document.getElementById('taskbar');
+    menu.style.left=e.clientX+'px';
+    menu.style.bottom=(window.innerHeight-e.clientY)+'px';
+    menu.style.top='auto';
+    menu.classList.add('show');
+    // ظهور تدريجي
+    items.forEach((item,i)=>{ setTimeout(()=>item.classList.add('visible'), i*55); });
+  });
+  searchBtn.onclick=e=>{e.stopPropagation();startMenu.classList.remove('show');searchPane.classList.toggle('show');if(searchPane.classList.contains('show'))setTimeout(()=>searchInput.focus(),350);};
+  searchInput.oninput=(e)=>{const val=e.target.value.toLowerCase();const resultsArea=document.getElementById('os-search-results');if(val===''){resultsArea.innerHTML='ابدأ الكتابة للبحث...';return;}const searchable=APPS_DATA.filter(a=>!a._hidden);const found=searchable.filter(a=>a.name.toLowerCase().includes(val)||a.id.toLowerCase().includes(val));if(found.length>0){resultsArea.innerHTML=found.map(a=>`<div style="padding:10px;cursor:pointer;display:flex;align-items:center;margin-bottom:5px;" onclick="Kernel.launchApp('${a.id}');document.getElementById('win8-search-pane').classList.remove('show');document.getElementById('os-search-input').value='';"><span style="font-size:1.5rem;margin-right:15px;">${a.icon}</span><span style="font-size:1.1rem;">${a.name}</span></div>`).join('');}else{resultsArea.innerHTML=`<div style="padding:10px;color:#ff6b6b;">لم يتم العثور على نتائج لـ "${val}"</div>`;}};
+  powerBtn.onclick=e=>{e.stopPropagation();powerPopup.style.display=(powerPopup.style.display==='flex')?'none':'flex';};
+  // Sidebar hover: توسع بطيء، رجوع سريع
+  const sidebar=document.getElementById('start-sidebar');
+  if(sidebar){
+    sidebar.addEventListener('mouseenter',()=>{
+      sidebar.style.transition='width 0.22s cubic-bezier(0.17,0.89,0.32,1.1), background 0.22s ease, backdrop-filter 0.22s ease';
+      sidebar.style.width='160px'; sidebar.style.maxWidth='160px';
+      sidebar.style.background='rgba(15,15,22,0.88)';
+      sidebar.style.backdropFilter='blur(30px)';
+    });
+    sidebar.addEventListener('mouseleave',()=>{
+      sidebar.style.transition='width 0.3s cubic-bezier(0.4,0,0.2,1), background 0.3s ease, backdrop-filter 0.3s ease';
+      sidebar.style.width='42px'; sidebar.style.maxWidth='42px';
+      sidebar.style.background='rgba(15,15,22,0.18)';
+      sidebar.style.backdropFilter='blur(18px)';
+    });
+  }
+  document.getElementById('show-desktop-btn').onclick=()=>this.windows.forEach(w=>w.minimize());
+}
+
+initGlobalEvents() {
+  document.addEventListener('click',(e)=>{const startMenu=document.getElementById('start-menu'),startBtn=document.getElementById('start-btn'),contextMenu=document.getElementById('os-context-menu'),searchPane=document.getElementById('win8-search-pane'),searchBtn=document.getElementById('search-btn'),powerPopup=document.getElementById('power-popup'),powerBtn=document.getElementById('power-btn-main'),clockPopup=document.getElementById('clock-popup'),clockBtn=document.getElementById('taskbar-clock-btn'),startCtx=document.getElementById('start-ctx-menu'),textCtx=document.getElementById('text-ctx-menu');if(startMenu&&!startMenu.contains(e.target)&&!startBtn.contains(e.target)&&(!contextMenu||!contextMenu.contains(e.target)))startMenu.classList.remove('show');if(searchPane&&!searchPane.contains(e.target)&&!searchBtn.contains(e.target))searchPane.classList.remove('show');if(clockPopup&&clockBtn&&!clockPopup.contains(e.target)&&!clockBtn.contains(e.target))clockPopup.classList.remove('show');document.getElementById('snap-assist-overlay').style.display='none';if(contextMenu)contextMenu.style.display='none';if(powerPopup&&powerBtn&&!powerBtn.contains(e.target))powerPopup.style.display='none';if(startCtx&&!startCtx.contains(e.target)&&!startBtn.contains(e.target))Kernel.closeStartCtx();if(textCtx&&!textCtx.contains(e.target))textCtx.style.display='none';});
+  document.oncontextmenu=e=>{
+    // السماح لـ textarea و input بقائمتهم المخصصة
+    if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT'){
+      e.preventDefault();
+      e.stopPropagation();
+      this.showTextCtxMenu(e.clientX,e.clientY,e.target);
+      return;
+    }
+    e.preventDefault();
+  };
+  document.addEventListener('keydown',(e)=>{
+    const ls=document.getElementById('lock-screen');
+    const searchPane=document.getElementById('win8-search-pane');
+    const activeTag=document.activeElement.tagName;
+    const isTyping=activeTag==='INPUT'||activeTag==='TEXTAREA';
+    // Space لفتح شاشة القفل
+    if(e.code==='Space'&&!isTyping&&ls&&ls.style.display!=='none'){
+      e.preventDefault();
+      ls.style.transition='transform 0.7s cubic-bezier(0.1,0.9,0.2,1)';
+      ls.style.transform='translateY(-100%)';
+      setTimeout(()=>ls.style.display='none',700);
+    }
+    // S لفتح لوحة البحث
+    if((e.key==='s'||e.key==='S')&&!isTyping){
+      e.preventDefault();
+      const startMenu=document.getElementById('start-menu');
+      startMenu.classList.remove('show');
+      searchPane.classList.add('show');
+      setTimeout(()=>document.getElementById('os-search-input').focus(),350);
+    }
+    // Esc لإغلاق لوحة البحث
+    if(e.key==='Escape'&&searchPane&&searchPane.classList.contains('show')){
+      searchPane.classList.remove('show');
+    }
+  });
+}
+
+renderAppList(apps) {
+  const list=document.getElementById('start-list');
+  const L=this.osLang;
+  const labels={
+    header:   L==='en'?'Start':L==='zh'?'开始':'ابدأ',
+    pinned:   L==='en'?'Pinned Apps':L==='zh'?'已固定应用':'التطبيقات المثبتة مسبقاً',
+    system:   L==='en'?'System Apps':L==='zh'?'系统应用':'تطبيقات النظام'
+  };
+  const systemIds=['settings','explorer','cmd','taskmgr','control','security','ie'].filter(id=>{ const a=APPS_DATA.find(x=>x.id===id); return a&&!a._hidden; });
+  const pinnedIds=[];
+  list.innerHTML=`<div class="start-apps-scroll" id="start-apps-scroll"></div>`;
+  const scroll=list.querySelector('#start-apps-scroll');
+  scroll.innerHTML+=`<div class="start-section-divider"><div class="start-section-label">${labels.system}</div></div>`;
+  apps.filter(a=>systemIds.includes(a.id)).forEach(app=>scroll.appendChild(this._makeAppItem(app)));
+}
+
+_makeAppItem(app) {
+  const item=document.createElement('div');item.className='app-item';
+  item.innerHTML=`<div class="app-icon-small">${app.icon.replace(/<img /g,'<img onerror="this.style.display=\'none\'" ')}</div><div class="app-name">${app.name}</div>`;
+  item.draggable=true;
+  item.ondragstart=(e)=>{e.dataTransfer.setData('text/plain',app.id);const sm=document.getElementById('start-menu');sm.classList.add('expanded');if(sm.offsetWidth<400)sm.style.width='600px';};
+  item.onclick=(e)=>{e.stopPropagation();this.launchApp(app.id);document.getElementById('start-menu').classList.remove('show');};
+  item.oncontextmenu=(e)=>{e.preventDefault();e.stopPropagation();this.showContextMenu(e.clientX,e.clientY,app);};
+  return item;
+}
+
+showContextMenu(x,y,app,isTile=false) {
+  const menu=document.getElementById('os-context-menu');menu.style.display='block';menu.style.left=x+'px';menu.style.top=y+'px';
+  let content=`<div class="context-item" onclick="Kernel.launchApp('${app.id}');document.getElementById('start-menu').classList.remove('show');">تشغيل</div>`;
+  if(app.id==='cmd')content+=`<div class="context-item admin" onclick="Kernel.requestAdminPrivileges('${app.id}');document.getElementById('start-menu').classList.remove('show');">تشغيل كمسؤول</div>`;
+  if(this.pinnedTaskbar.includes(app.id)){content+=`<div class="context-item" onclick="Kernel.unpinFromTaskbar('${app.id}')">إلغاء التثبيت من شريط المهام</div>`;}else{content+=`<div class="context-item" onclick="Kernel.pinToTaskbar('${app.id}')">📌 تثبيت في شريط المهام</div>`;}
+  if(isTile){content+=`<div class="context-item admin" style="color:#d32f2f;" onclick="Kernel.unpinTile('${app.id}')">إزالة من القوائم السريعة</div>`;}else{if(!this.pinnedTiles.includes(app.id)){content+=`<div class="context-item" onclick="Kernel.pinTile('${app.id}')">إضافة إلى القوائم السريعة</div>`;}}
+  menu.innerHTML=content;
+}
+
+pinTile(id) { if(!this.pinnedTiles.includes(id)){this.pinnedTiles.push(id);this.renderTiles();const sm=document.getElementById('start-menu');sm.classList.add('expanded');if(sm.offsetWidth<400)sm.style.width='600px';} }
+unpinTile(id) { this.pinnedTiles=this.pinnedTiles.filter(i=>i!==id);this.renderTiles(); }
+
+requestAdminPrivileges(id) {
+  const appInfo=APPS_DATA.find(a=>a.id===id);
+  if(appInfo){
+    document.getElementById('uac-app-name').innerText=appInfo.name;
+    document.getElementById('uac-app-icon-display').innerHTML=appInfo.icon;
+    document.getElementById('uac-app-path').innerText=`C:\\Windows\\System32\\${id}.exe`;
+  }
+  const uac=document.getElementById('uac-overlay');uac.style.display='flex';
+  document.getElementById('uac-yes').onclick=()=>{uac.style.display='none';this.launchApp(id,true);};
+  document.getElementById('uac-no').onclick=()=>{uac.style.display='none';};
+}
+
+launchApp(id,isAdmin=false) {
+  const instanceId=isAdmin?id+'_admin':id;
+  if(this.windows.has(instanceId)){const existing=this.windows.get(instanceId);if(existing.minimized)existing.restore();else existing.focus();return;}
+  const appInfo=APPS_DATA.find(a=>a.id===id);
+  const win=new OSWindow(appInfo,this,isAdmin);this.windows.set(instanceId,win);this.syncTaskbar();this.syncPinnedState();return win;
+}
+
+showSnapAssist(side,sourceWinId) {
+  const overlay=document.getElementById('snap-assist-overlay');const others=Array.from(this.windows.values()).filter(w=>w.id!==sourceWinId&&!w.minimized);if(others.length===0)return;const isLeft=side==='left';
+  overlay.style.display='block';overlay.style.top='0';overlay.style.width='50vw';overlay.style.height='calc(100vh - 40px)';overlay.style.left=isLeft?'50vw':'0';
+  overlay.innerHTML=`<div class="snap-assist-title">اختر تطبيقاً للمحاذاة</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:15px;padding:20px;">${others.map(w=>`<div style="background:rgba(255,255,255,0.1);padding:20px;text-align:center;cursor:pointer;border:1px solid rgba(255,255,255,0.2);" onclick="Kernel.snapWindowTo('${w.id}','${isLeft?'right':'left'}')"><div style="font-size:2rem;">${w.app.icon}</div><div style="color:white;margin-top:10px;font-size:0.8rem;">${w.app.name}</div></div>`).join('')}</div>`;
+}
+
+snapWindowTo(id,side) { const win=this.windows.get(id);if(win){win.restore();win.maximized=false;win.rect.w=window.innerWidth/2;win.rect.h=window.innerHeight-40;win.rect.y=0;win.rect.x=(side==='left')?0:window.innerWidth/2;win.applyRect();}document.getElementById('snap-assist-overlay').style.display='none'; }
+
+initDesktop() {
+  const desk=document.getElementById('desktop-environment');let marquee,startX,startY;
+  desk.onmousedown=e=>{if(e.target!==desk)return;startX=e.clientX;startY=e.clientY;marquee=document.createElement('div');marquee.className='desktop-selection-marquee';desk.appendChild(marquee);const move=ev=>{let x=Math.min(ev.clientX,startX),y=Math.min(ev.clientY,startY),w=Math.abs(ev.clientX-startX),h=Math.abs(ev.clientY-startY);marquee.style.left=x+'px';marquee.style.top=y+'px';marquee.style.width=w+'px';marquee.style.height=h+'px';marquee.style.display='block';};const up=()=>{if(marquee)marquee.remove();window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',up);marquee=null;};window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);};
+}
+
+syncTaskbar() {
+  const container=document.getElementById('taskbar-apps');container.innerHTML='';
+  this.windows.forEach(win=>{if(this.pinnedTaskbar.includes(win.app.id))return;const icon=document.createElement('div');icon.className=`tb-app-icon ${!win.minimized?'active':'minimized-win'}`;icon.innerHTML=win.app.icon;icon.onclick=(e)=>{e.stopPropagation();win.minimized?win.restore():win.minimize();};container.appendChild(icon);});
+  this.syncPinnedState();
+}
+
+setBackground(target,url) { if(!url)return;const el=(target==='desktop-environment')?document.getElementById('desktop-environment'):document.getElementById('lock-screen');if(el)el.style.backgroundImage=`url('${url}')`; }
+setLang(lang) {
+  this.osLang=lang;
+  this.renderCalendar();
+  // تحديث قائمة ابدأ إذا كانت مفتوحة
+  const sm=document.getElementById('start-menu');
+  if(sm.classList.contains('show')){ this.renderAppList(APPS_DATA); this.renderTiles(); }
+  // تحديث نص ابدأ في الشريط الجانبي
+  const sbl=document.getElementById('start-sidebar-label');
+  if(sbl) sbl.textContent = lang==='en'?'Start':lang==='zh'?'开始':'ابدأ';
+  if(si) si.placeholder = lang==='en'?'Search everywhere...':lang==='zh'?'搜索...':'بحث في كل مكان...';
+  // تحديث نص بحث الكلمة الأولى
+  const sp=document.querySelector('.search-pane-title');
+  if(sp) sp.textContent = lang==='en'?'Search':lang==='zh'?'搜索':'بحث';
+  // تحديث الساعة فوراً
+  const now=new Date();
+  const langMap={ar:'ar-SA',en:'en-US',zh:'zh-CN'};
+  const lc=langMap[lang]||'ar-SA';
+  const is12=this.timeFormat==='12';
+  const timeStr=now.toLocaleTimeString(lc,{hour:'2-digit',minute:'2-digit',hour12:is12});
+  const dateStr=now.toLocaleDateString(lc,{weekday:'long',month:'long',day:'numeric'});
+  document.getElementById('lock-time').textContent=timeStr;
+  document.getElementById('lock-date').textContent=dateStr;
+  document.getElementById('tb-time').textContent=timeStr;
+  document.getElementById('tb-date').textContent=now.toLocaleDateString(lc);
+  const cp=document.getElementById('cp-time'); if(cp)cp.textContent=timeStr;
+  const cd=document.getElementById('cp-date'); if(cd)cd.textContent=now.toLocaleDateString(lc,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+setTimeFormat(fmt) {
+  this.timeFormat=fmt;
+  const now=new Date();
+  const langMap={ar:'ar-SA',en:'en-US',zh:'zh-CN'};
+  const lc=langMap[this.osLang]||'ar-SA';
+  const is12=fmt==='12';
+  const timeStr=now.toLocaleTimeString(lc,{hour:'2-digit',minute:'2-digit',hour12:is12});
+  document.getElementById('tb-time').textContent=timeStr;
+  document.getElementById('lock-time').textContent=timeStr;
+  const cp=document.getElementById('cp-time'); if(cp)cp.textContent=timeStr;
+}
+launchCustomApp(app) {
+  const win=new OSWindow(app,this);
+  this.windows.set(app.id,win);
+  this.syncTaskbar();
+  this.syncPinnedState();
+  return win;
+}
+addDesktopShortcut(app) {
+  const desktop=document.getElementById('desktop-environment');
+  if(!desktop)return;
+  const sc=document.createElement('div');
+  sc.className='desktop-icon';
+  const bigIcon=app._iconUrl
+    ?`<img src="${app._iconUrl}" style="width:40px;height:40px;object-fit:contain;" onerror="this.style.display='none'">`
+    :app.icon.replace(/width="20" height="20"/g,'width="36" height="36"').replace(/width="22" height="22"/g,'width="36" height="36"');
+  sc.innerHTML=`<div class="desktop-icon-img">${bigIcon}</div><div class="desktop-icon-label">${app.name}</div>`;
+  sc.ondblclick=()=>{ if(app._custom) this.launchCustomApp(app); else this.launchApp(app.id); };
+  desktop.appendChild(sc);
+}
+shutdown() {
+  const pp=document.getElementById('power-popup');
+  if(pp) pp.style.display='none';
+  document.getElementById('start-menu').classList.remove('show');
+  document.body.style.cursor='none';
+  let clicks=0;
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:#000;z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+  overlay.innerHTML='<div style="color:#fff;font-size:1.1rem;font-weight:300;font-family:Segoe UI,sans-serif;letter-spacing:1px;">تم إيقاف التشغيل</div><div id="sd-hint" style="color:rgba(255,255,255,0.3);font-size:0.72rem;font-family:Segoe UI,sans-serif;">انقر مرتين للتشغيل</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('dblclick',()=>{ overlay.remove(); document.body.style.cursor=''; location.reload(); });
+}
+}
+
+// ── OSWindow ── Window manager engine © Faisal SS505 ──
+class OSWindow {
+constructor(app,kernel,isAdmin=false) {
+  this.app=app;this.kernel=kernel;this.isAdmin=isAdmin;this.id=isAdmin?app.id+'_admin':app.id;this.minimized=false;this.maximized=false;
+  const isWF=app.id==='winfeatures';
+  const isTS=app.id==='troubleshoot';
+  const isTM=app.id==='taskmgr';
+  this.rect=isWF?{x:Math.max(0,(window.innerWidth-360)/2),y:Math.max(0,(window.innerHeight-300)/2),w:360,h:300}
+    :isTS?{x:Math.max(0,(window.innerWidth-420)/2),y:Math.max(0,(window.innerHeight-380)/2),w:420,h:380}
+    :isTM?{x:Math.max(0,(window.innerWidth-560)/2),y:Math.max(0,(window.innerHeight-500)/2),w:560,h:500}
+    :{x:100+Math.random()*50,y:50+Math.random()*50,w:600,h:420};
+  this.createUI();
+}
+
+createUI() {
+  this.el=document.createElement('div');this.el.className='os-window';this.applyRect();
+  let isCmd=this.app.id==='cmd';
+  let isIE=this.app.id==='ie';
+  let isWebApp=!!this.app._webCode;
+  let contentHtml=`<h2>${this.app.name}</h2><hr style="margin:10px 0;opacity:0.2;"><p>Kernel Version 9.0 (REW OS)</p>`;
+  if(this.app.id==='settings'){contentHtml=`<div class="settings-layout"><div class="settings-nav"><div class="settings-nav-item active" onclick="(function(el){el.closest('.settings-layout').querySelectorAll('.settings-nav-item').forEach(i=>i.classList.remove('active'));el.classList.add('active');el.closest('.settings-layout').querySelectorAll('.settings-page').forEach(p=>p.classList.remove('active'));el.closest('.settings-layout').querySelector('#spage-desktop').classList.add('active');})(this)"><svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>الخلفية</div><div class="settings-nav-item" onclick="(function(el){el.closest('.settings-layout').querySelectorAll('.settings-nav-item').forEach(i=>i.classList.remove('active'));el.classList.add('active');el.closest('.settings-layout').querySelectorAll('.settings-page').forEach(p=>p.classList.remove('active'));el.closest('.settings-layout').querySelector('#spage-lock').classList.add('active');})(this)"><svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>شاشة القفل</div><div class="settings-nav-item" onclick="(function(el){el.closest('.settings-layout').querySelectorAll('.settings-nav-item').forEach(i=>i.classList.remove('active'));el.classList.add('active');el.closest('.settings-layout').querySelectorAll('.settings-page').forEach(p=>p.classList.remove('active'));el.closest('.settings-layout').querySelector('#spage-lang').classList.add('active');})(this)"><svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>اللغة والوقت</div><div class="settings-nav-item" onclick="(function(el){el.closest('.settings-layout').querySelectorAll('.settings-nav-item').forEach(i=>i.classList.remove('active'));el.classList.add('active');el.closest('.settings-layout').querySelectorAll('.settings-page').forEach(p=>p.classList.remove('active'));el.closest('.settings-layout').querySelector('#spage-system').classList.add('active');})(this)"><svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>النظام</div></div><div id="spage-desktop" class="settings-page active"><label class="settings-label">اختر خلفية سطح المكتب</label><div class="settings-grid"><div class="bg-card" style="background-image:url('https://github.com/FaisalTahaL/12345678ikjnhgfdcvbhju76t/blob/main/img4.jpg?raw=true')" onclick="Kernel.setBackground('desktop-environment','https://github.com/FaisalTahaL/12345678ikjnhgfdcvbhju76t/blob/main/img4.jpg?raw=true')"></div><div class="bg-card" style="background-image:url('https://github.com/FaisalTahaL/12345678ikjnhgfdcvbhju76t/blob/main/img0.jpg?raw=true')" onclick="Kernel.setBackground('desktop-environment','https://github.com/FaisalTahaL/12345678ikjnhgfdcvbhju76t/blob/main/img0.jpg?raw=true')"></div><div class="bg-card" style="background-image:url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=800&q=80')" onclick="Kernel.setBackground('desktop-environment','https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=800&q=80')"></div><div class="bg-card" style="background-image:url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80')" onclick="Kernel.setBackground('desktop-environment','https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80')"></div><div class="bg-card" style="background-image:url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=800&q=80')" onclick="Kernel.setBackground('desktop-environment','https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=800&q=80')"></div><div class="bg-card" style="background-image:url('https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80')" onclick="Kernel.setBackground('desktop-environment','https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80')"></div></div><input type="text" class="settings-input" id="desk-url-${this.id}" placeholder="رابط مخصص..."><button class="settings-btn" onclick="Kernel.setBackground('desktop-environment',document.getElementById('desk-url-${this.id}').value)">تطبيق</button></div><div id="spage-lock" class="settings-page"><label class="settings-label">اختر خلفية شاشة القفل</label><div class="settings-grid"><div class="bg-card" style="background-image:url('https://wallpapercave.com/wp/wp8922801.png')" onclick="Kernel.setBackground('lock-screen','https://wallpapercave.com/wp/wp8922801.png')"></div><div class="bg-card" style="background-image:url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80')" onclick="Kernel.setBackground('lock-screen','https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80')"></div><div class="bg-card" style="background-image:url('https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?auto=format&fit=crop&w=800&q=80')" onclick="Kernel.setBackground('lock-screen','https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?auto=format&fit=crop&w=800&q=80')"></div><div class="bg-card" style="background-image:url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=800&q=80')" onclick="Kernel.setBackground('lock-screen','https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=800&q=80')"></div></div><input type="text" class="settings-input" id="lock-url-${this.id}" placeholder="رابط مخصص..."><button class="settings-btn" onclick="Kernel.setBackground('lock-screen',document.getElementById('lock-url-${this.id}').value)">تطبيق</button></div><div id="spage-lang" class="settings-page"><label class="settings-label">لغة النظام</label><div class="settings-row"><label>اختر اللغة</label></div><select class="settings-select" onchange="Kernel.setLang(this.value)"><option value="ar" ${this.kernel&&this.kernel.osLang==='ar'?'selected':''}>🇸🇦 عربي</option><option value="en" ${this.kernel&&this.kernel.osLang==='en'?'selected':''}>🇺🇸 English</option><option value="zh" ${this.kernel&&this.kernel.osLang==='zh'?'selected':''}>🇨🇳 中文</option></select><label class="settings-label">تنسيق الوقت</label><select class="settings-select" onchange="Kernel.setTimeFormat(this.value)"><option value="24" ${this.kernel&&this.kernel.timeFormat==='24'?'selected':''}>24 ساعة (14:30)</option><option value="12" ${this.kernel&&this.kernel.timeFormat==='12'?'selected':''}>12 ساعة (2:30 PM)</option></select></div><div id=\"spage-system\" class=\"settings-page\"><label class=\"settings-label\">معلومات النظام</label><div style=\"background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:14px;font-size:0.8rem;color:#ccc;line-height:2.2;\"><div><svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z"/></svg> <b>الإصدار:</b> REW OS Build 9.0</div><div><svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg> <b>النواة:</b> REW Kernel v9.0</div><div><svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg> <b>المؤلف:</b> Faisal SS505</div><div><svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/></svg> <b>سنة الإصدار:</b> 2025</div><div><svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg> <b>المنصة:</b> HTML5 / Web</div></div><div style=\"margin-top:14px;padding:10px;background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.2);font-size:0.75rem;color:rgba(255,200,100,0.8)\"><svg viewBox="0 0 24 24" width="14" height="14" fill="#e67e22"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg> هذا القسم قيد التطوير</div></div></div>`;}
+  else if(isCmd){const prompt=this.isAdmin?"C:\\Windows\\System32>":"C:\\Users\\User>";contentHtml=`<div class="terminal-container"><div class="terminal-output" id="out-${this.id}">REW OS [Version 9.0]\n(c) REW OS. All rights reserved.\n${this.isAdmin?'Administrative Mode: Enabled.\n':''}\n</div><div class="terminal-line"><span class="terminal-prompt">${prompt}</span><input type="text" class="terminal-input" id="in-${this.id}" autofocus spellcheck="false"></div></div>`;}
+  else if(isIE){contentHtml=this.buildIEContent();}
+  else if(this.app.id==='winfeatures'){contentHtml=this.buildWinFeaturesContent();}
+  else if(this.app.id==='troubleshoot'){contentHtml=this.buildTroubleshootContent();}
+  else if(this.app.id==='control'){contentHtml=this.buildControlPanelContent();}
+  else if(this.app.id==='taskmgr'){contentHtml=this.buildTaskMgrContent();}
+  else if(this.app.id==='clockapp'){contentHtml=this.buildClockAppContent();}
+  else if(this.app.id==='appbuilder'){contentHtml=this.buildAppBuilderContent();}
+  else if(isWebApp){contentHtml=`<iframe srcdoc="${this.app._webCode.replace(/"/g,'&quot;')}" style="width:100%;height:100%;border:none;" sandbox="allow-scripts allow-same-origin"></iframe>`;}
+  this.el.innerHTML=`<div class="window-titlebar ie-titlebar-${isIE?'yes':'no'}"><div class="window-title">${this.app.icon} ${this.app.name}${this.isAdmin?' (Administrator)':''}</div><div class="window-controls"><div class="win-btn" onclick="Kernel.windows.get('${this.id}').minimize()">─</div><div class="win-btn" onclick="Kernel.windows.get('${this.id}').toggleMax()">▢</div><div class="win-btn close" onclick="Kernel.windows.get('${this.id}').close()">✕</div></div></div>${isIE?contentHtml:`<div class="window-content ${isCmd?'is-terminal':''}${this.app.id==='settings'?' is-settings':''}">${contentHtml}</div>`}`;
+  document.getElementById('desktop-environment').appendChild(this.el);
+  if(isCmd)this.initTerminal();
+  if(isIE)this.initIE();
+  if(this.app.id==='taskmgr')this.initTaskMgr();
+  if(this.app.id==='clockapp')this.initClockApp();
+  if(this.app.id==='appbuilder')this.initAppBuilder();
+  requestAnimationFrame(()=>{this.el.classList.add('active-win');this.focus();});
+  this.el.onmousedown=()=>this.focus();
+  this.el.querySelector('.window-titlebar').onmousedown=e=>this.startDrag(e);
+}
+
+buildClockAppContent() {
+  return `<div id="clockapp-wrap" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:Segoe UI,sans-serif;background:rgba(15,15,25,0.95);color:#fff;">
+  <div id="ca-time" style="font-size:3.5rem;font-weight:200;letter-spacing:4px;color:#fff;"></div>
+  <div id="ca-date" style="font-size:1rem;color:rgba(255,255,255,0.5);letter-spacing:1px;"></div>
+  <div id="ca-cal" style="margin-top:10px;width:260px;"></div>
+  </div>`;
+}
+initClockApp() {
+  const tick=()=>{
+    if(!document.body.contains(this.el))return;
+    const now=new Date();
+    const t=this.el.querySelector('#ca-time');
+    const d=this.el.querySelector('#ca-date');
+    if(t)t.textContent=now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    if(d)d.textContent=now.toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    // تقويم
+    const cal=this.el.querySelector('#ca-cal');
+    if(cal&&cal.children.length===0){
+      const y=now.getFullYear(),m=now.getMonth();
+      const first=new Date(y,m,1).getDay();
+      const days=new Date(y,m+1,0).getDate();
+      const names=['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+      let h=`<div style="text-align:center;color:#8ab4f8;margin-bottom:8px;font-size:0.85rem;">${now.toLocaleDateString('ar-SA',{month:'long',year:'numeric'})}</div>`;
+      h+=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:0.65rem;color:rgba(255,255,255,0.35);margin-bottom:4px;">`;
+      names.forEach(n=>h+=`<div>${n}</div>`);
+      h+=`</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:0.75rem;">`;
+      for(let i=0;i<first;i++)h+=`<div></div>`;
+      for(let i=1;i<=days;i++){
+        const isToday=i===now.getDate();
+        h+=`<div style="padding:3px;${isToday?'background:#0078D7;border-radius:50%;color:#fff;font-weight:600;':'color:rgba(255,255,255,0.7);'}">${i}</div>`;
+      }
+      h+=`</div>`;
+      cal.innerHTML=h;
+    }
+    setTimeout(tick,1000);
+  };
+  tick();
+}
+
+buildAppBuilderContent() {
+  return `<div id="ab-wrap" style="height:100%;display:flex;flex-direction:column;font-family:Segoe UI,sans-serif;background:rgba(18,18,28,0.97);color:#e0e0e0;overflow:hidden;">
+  <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08);font-size:0.82rem;color:#8ab4f8;font-weight:600;">إنشاء تطبيق جديد</div>
+  <div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;gap:8px;">
+    <div style="display:flex;gap:10px;">
+      <div style="flex:1;">
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-bottom:3px;">اسم التطبيق</div>
+        <input id="ab-name" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:6px 10px;font-size:0.8rem;outline:none;font-family:Segoe UI;" placeholder="My App" />
+      </div>
+      <div style="width:130px;">
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-bottom:3px;">رابط الأيقونة</div>
+        <input id="ab-icon" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:6px 10px;font-size:0.8rem;outline:none;font-family:Segoe UI;" placeholder="https://..." />
+      </div>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.75rem;cursor:pointer;"><input type="checkbox" id="ab-pin-desktop" checked style="accent-color:#0078D7;"> سطح المكتب</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.75rem;cursor:pointer;"><input type="checkbox" id="ab-pin-taskbar" style="accent-color:#0078D7;"> شريط المهام</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.75rem;cursor:pointer;"><input type="checkbox" id="ab-pin-start" style="accent-color:#0078D7;"> قائمة ابدأ</label>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;min-height:0;padding:8px 16px 0;">
+    <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-bottom:4px;">كود HTML / CSS / JS</div>
+    <textarea id="ab-code" style="flex:1;width:100%;background:#08080f;border:1px solid rgba(255,255,255,0.1);color:#7ec8e3;padding:10px;font-size:0.78rem;font-family:Consolas,monospace;outline:none;resize:none;line-height:1.5;scrollbar-width:thin;scrollbar-color:#111 #08080f;" placeholder="&lt;!-- اكتب كود HTML هنا --&gt;&#10;&lt;style&gt;body{background:#1a1a2e;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:Segoe UI;}&lt;/style&gt;&#10;&lt;h1&gt;مرحباً!&lt;/h1&gt;"></textarea>
+  </div>
+  <div style="padding:8px 16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;gap:8px;align-items:center;">
+    <button id="ab-preview-btn" style="padding:5px 14px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;cursor:pointer;font-size:0.78rem;font-family:Segoe UI;">معاينة</button>
+    <button id="ab-build-btn" style="padding:5px 18px;background:#0078D7;border:1px solid #0078D7;color:#fff;cursor:pointer;font-size:0.78rem;font-family:Segoe UI;font-weight:600;">إنشاء التطبيق</button>
+    <div id="ab-msg" style="font-size:0.73rem;color:#27ae60;display:none;margin-right:auto;"></div>
+  </div>
+  </div>`;
+}
+initAppBuilder() {
+  const wid=this.id;
+  const getEl=id=>this.el.querySelector('#'+id);
+  // معاينة
+  getEl('ab-preview-btn').onclick=()=>{
+    const code=getEl('ab-code').value;
+    const name=getEl('ab-name').value||'معاينة';
+    const previewApp={id:'preview_'+Date.now(),name,icon:'<svg viewBox="0 0 24 24" width="18" height="18" fill="#aaa"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>',_webCode:code};
+    this.kernel.launchCustomApp(previewApp);
+  };
+  // إنشاء
+  getEl('ab-build-btn').onclick=()=>{
+    const name=getEl('ab-name').value.trim();
+    const code=getEl('ab-code').value.trim();
+    const iconUrl=getEl('ab-icon').value.trim();
+    const pinDesktop=getEl('ab-pin-desktop').checked;
+    const pinTaskbar=getEl('ab-pin-taskbar').checked;
+    const pinStart=getEl('ab-pin-start').checked;
+    if(!name||!code){getEl('ab-msg').style.color='#e74c3c';getEl('ab-msg').textContent='الرجاء إدخال الاسم والكود.';getEl('ab-msg').style.display='block';return;}
+    const appId='custom_'+name.replace(/\s+/g,'_').toLowerCase()+'_'+Date.now();
+    const iconSmall=iconUrl?`<img src="${iconUrl}" style="width:20px;height:20px;object-fit:contain;" onerror="this.style.display='none'">`:'<svg viewBox="0 0 24 24" width="20" height="20" fill="#8ab4f8"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>';
+    const newApp={id:appId,name,icon:iconSmall,_webCode:code,_custom:true,_iconUrl:iconUrl};
+    APPS_DATA.push(newApp);
+    // حفظ في sessionStorage
+    const saved=JSON.parse(sessionStorage.getItem('rewos_custom_apps')||'[]');
+    saved.push({id:appId,name,icon:iconUrl,code,pinDesktop,pinTaskbar,pinStart});
+    sessionStorage.setItem('rewos_custom_apps',JSON.stringify(saved));
+    if(pinTaskbar)this.kernel.pinToTaskbar(appId);
+    if(pinDesktop)this.kernel.addDesktopShortcut(newApp);
+    if(pinStart){ this.kernel.pinnedTiles.push(appId); this.kernel.renderTiles(); }
+    getEl('ab-msg').style.color='#27ae60';
+    getEl('ab-msg').textContent=`✓ تم إنشاء "${name}" بنجاح!`;
+    getEl('ab-msg').style.display='block';
+    setTimeout(()=>getEl('ab-msg').style.display='none',3000);
+  };
+}
+
+buildTaskMgrContent() {
+  const wid=this.id;
+  const tabs=[
+    {id:'processes',label:'العمليات'},
+    {id:'performance',label:'الأداء'},
+    {id:'users',label:'المستخدمون'},
+  ];
+  return '<div id="tm-wrap" style="height:100%;display:flex;font-family:Segoe UI,sans-serif;color:#ddd;">'
+    // شريط التبويب الجانبي
+    +'<div style="width:130px;min-width:130px;background:rgba(0,0,0,0.3);border-left:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;padding-top:8px;">'
+    +'<div id="tm-tab-processes" class="tm-tab tm-tab-active" onclick="Kernel.windows.get(\''+wid+'\').tmSwitchTab(\'processes\')">📋 العمليات</div>'
+    +'<div id="tm-tab-performance" class="tm-tab" onclick="Kernel.windows.get(\''+wid+'\').tmSwitchTab(\'performance\')">📊 الأداء</div>'
+    +'<div id="tm-tab-users" class="tm-tab" onclick="Kernel.windows.get(\''+wid+'\').tmSwitchTab(\'users\')">👤 المستخدمون</div>'
+    +'</div>'
+    // المحتوى
+    +'<div style="flex:1;overflow:hidden;display:flex;flex-direction:column;">'
+    // صفحة العمليات
+    +'<div id="tm-page-processes" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;">'
+    +'<div style="padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.08);font-size:0.72rem;color:rgba(255,255,255,0.4);display:grid;grid-template-columns:1fr 70px 70px;gap:8px;">'
+    +'<span>الاسم</span><span style="text-align:center;">CPU</span><span style="text-align:center;">الذاكرة</span></div>'
+    // التطبيقات
+    +'<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.08);">'
+    +'<div style="padding:3px 12px;font-size:0.7rem;color:rgba(255,255,255,0.35);font-weight:600;letter-spacing:0.5px;">التطبيقات</div>'
+    +'<div id="tm-apps-list"></div>'
+    +'</div>'
+    // خدمات النظام موحدة
+    +'<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.08);">'
+    +'<div style="padding:3px 12px;font-size:0.7rem;color:rgba(255,255,255,0.35);font-weight:600;letter-spacing:0.5px;">خدمات النظام</div>'
+    +'<div id="tm-svc-list"></div>'
+    +'</div>'
+    // خدمة Explorer
+    +'<div style="padding:4px 0;">'
+    +'<div style="padding:3px 12px;font-size:0.7rem;color:rgba(255,255,255,0.35);font-weight:600;letter-spacing:0.5px;">مدير الواجهة</div>'
+    +'<div id="tm-explorer-list"></div>'
+    +'</div>'
+    +'</div>'
+    // صفحة الأداء
+    +'<div id="tm-page-performance" style="flex:1;overflow:hidden;display:none;flex-direction:row;">'
+    // شريط جانبي للاختيار
+    +'<div id="tm-perf-sidebar" style="width:160px;min-width:160px;background:rgba(0,0,0,0.2);border-left:1px solid rgba(255,255,255,0.06);overflow-y:auto;padding:6px 0;">'
+    +'<div id="tm-ps-cpu"  class="tm-perf-side tm-perf-side-active" onclick="Kernel.windows.get(\''+wid+'\').tmPerfSelect(\'cpu\')">'
+    +'<div style="font-size:0.78rem;font-weight:600;">وحدة المعالجة المركزة</div>'
+    +'<div id="tm-ps-cpu-sub" style="font-size:0.68rem;color:rgba(255,255,255,0.45);">0%</div>'
+    +'<canvas id="tm-mini-cpu" width="60" height="30" style="margin-top:4px;"></canvas>'
+    +'</div>'
+    +'<div id="tm-ps-ram"  class="tm-perf-side" onclick="Kernel.windows.get(\''+wid+'\').tmPerfSelect(\'ram\')">'
+    +'<div style="font-size:0.78rem;font-weight:600;">الذاكرة</div>'
+    +'<div id="tm-ps-ram-sub" style="font-size:0.68rem;color:rgba(255,255,255,0.45);">0 MB</div>'
+    +'<canvas id="tm-mini-ram" width="60" height="30" style="margin-top:4px;"></canvas>'
+    +'</div>'
+    +'<div id="tm-ps-net"  class="tm-perf-side" onclick="Kernel.windows.get(\''+wid+'\').tmPerfSelect(\'net\')">'
+    +'<div style="font-size:0.78rem;font-weight:600;">الشبكة</div>'
+    +'<div id="tm-ps-net-sub" style="font-size:0.68rem;color:rgba(255,255,255,0.45);">جارٍ الفحص</div>'
+    +'</div>'
+    +'</div>'
+    // المحتوى الرئيسي
+    +'<div style="flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px;">'
+    // CPU
+    +'<div id="tm-detail-cpu" style="display:flex;flex-direction:column;gap:10px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:baseline;">'
+    +'<div style="font-size:1rem;color:#aaa;font-weight:300;">وحدة المعالجة المركزية</div>'
+    +'<div id="tm-cpu-usage-big" style="font-size:2rem;font-weight:300;color:#fff;">0%</div>'
+    +'</div>'
+    +'<div id="tm-cpu-name-detail" style="font-size:0.72rem;color:rgba(255,255,255,0.4);">جارٍ التعرف...</div>'
+    +'<canvas id="tm-chart-cpu" width="340" height="120" style="width:100%;height:120px;background:rgba(0,120,215,0.05);border:1px solid rgba(0,120,215,0.25);display:block;"></canvas>'
+    +'<div style="font-size:0.65rem;color:rgba(255,255,255,0.25);text-align:left;">60 ثانية</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">'
+    +'<div class="tm-info-cell"><div class="tm-info-label">الاستخدام</div><div id="tm-cpu-d-pct" class="tm-info-val">0%</div></div>'
+    +'<div class="tm-info-cell"><div class="tm-info-label">السرعة</div><div id="tm-cpu-d-speed" class="tm-info-val">–</div></div>'
+    +'<div class="tm-info-cell"><div class="tm-info-label">العمليات</div><div class="tm-info-val">--</div></div>'
+    +'<div class="tm-info-cell"><div class="tm-info-label">المعالجات المنطقية</div><div id="tm-cpu-d-cores" class="tm-info-val">–</div></div>'
+    +'</div></div>'
+    // RAM
+    +'<div id="tm-detail-ram" style="display:none;flex-direction:column;gap:10px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:baseline;">'
+    +'<div style="font-size:1rem;color:#aaa;font-weight:300;">الذاكرة (RAM)</div>'
+    +'<div id="tm-ram-usage-big" style="font-size:2rem;font-weight:300;color:#fff;">0 MB</div>'
+    +'</div>'
+    +'<canvas id="tm-chart-ram" width="340" height="120" style="width:100%;height:120px;background:rgba(39,174,96,0.05);border:1px solid rgba(39,174,96,0.25);display:block;"></canvas>'
+    +'<div style="font-size:0.65rem;color:rgba(255,255,255,0.25);text-align:left;">60 ثانية</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">'
+    +'<div class="tm-info-cell"><div class="tm-info-label">قيد الاستخدام</div><div id="tm-ram-d-used" class="tm-info-val">–</div></div>'
+    +'<div class="tm-info-cell"><div class="tm-info-label">متوفر</div><div id="tm-ram-d-avail" class="tm-info-val">–</div></div>'
+    +'<div class="tm-info-cell"><div class="tm-info-label">الإجمالي</div><div id="tm-ram-d-total" class="tm-info-val">–</div></div>'
+    +'<div class="tm-info-cell"><div class="tm-info-label">الاستخدام %</div><div id="tm-ram-d-pct" class="tm-info-val">–</div></div>'
+    +'</div></div>'
+    // Net
+    +'<div id="tm-detail-net" style="display:none;flex-direction:column;gap:10px;">'
+    +'<div style="font-size:1rem;color:#aaa;font-weight:300;">الشبكة</div>'
+    +'<div id="tm-net-big" style="font-size:1.4rem;font-weight:300;color:#fff;">جارٍ الفحص...</div>'
+    +'<div id="tm-net-detail" style="font-size:0.8rem;color:#aaa;line-height:2;"></div>'
+    +'</div>'
+    +'</div>'
+    +'</div>'
+    // صفحة المستخدمين
+    +'<div id="tm-page-users" style="flex:1;overflow-y:auto;display:none;flex-direction:column;padding:16px;gap:12px;">'
+    +'<div id="tm-users-content"></div>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+}
+
+initTaskMgr() {
+  const wid=this.id;
+  const kernel=this.kernel;
+
+  // بيانات الخدمات
+  const allSvcs=[
+    {name:'REW Defender Antivirus Service',  pid:'820',  mem:48.2},
+    {name:'Windows Security Center',         pid:'912',  mem:22.1},
+    {name:'Firewall Host Process',           pid:'1048', mem:18.4},
+    {name:'Credential Guard Service',        pid:'1124', mem:12.6},
+    {name:'Smart Card Authentication',       pid:'1256', mem:9.8},
+    {name:'NT Kernel & System',              pid:'4',    mem:64.0},
+    {name:'System Interrupt Handler',        pid:'8',    mem:0.4},
+    {name:'Memory Compression Service',      pid:'1832', mem:128.0},
+    {name:'Kernel Power Manager',            pid:'340',  mem:8.2},
+    {name:'Registry & Config Manager',       pid:'504',  mem:14.6},
+    {name:'Session Manager Subsystem',       pid:'516',  mem:10.8},
+    {name:'Service Control Manager',         pid:'628',  mem:6.4},
+    {name:'Local Security Authority',        pid:'732',  mem:22.4},
+    {name:'Windows Management Inst.',        pid:'1020', mem:18.0},
+    {name:'Device & Driver Manager',         pid:'1064', mem:12.2},
+    {name:'Update Orchestrator',             pid:'1140', mem:8.8},
+    {name:'Background Task Host',            pid:'1288', mem:16.4},
+    {name:'COM Surrogate',                   pid:'1444', mem:6.2},
+    {name:'CryptSvc (Crypto Service)',        pid:'1580', mem:10.4},
+    {name:'Event Log Service',               pid:'1660', mem:7.6},
+    {name:'Shell Infrastructure Host',       pid:'1744', mem:20.0},
+  ];
+  const explorerSvc={name:'REW OS Shell (Explorer)', pid:'2000', mem:38.6};
+
+  // رسم صف خدمة
+  const mkSvcRow=(p,isExplorer=false)=>{
+    const rowId='tm-svc-'+p.pid;
+    const stopTxt=isExplorer?'إعادة تشغيل':'إيقاف';
+    const warnMsg='تحذير: إيقاف خدمة نظام قد يسبب عدم استقرار. هل أنت متأكد؟';
+    return '<div id="'+rowId+'" style="display:grid;grid-template-columns:1fr 70px 70px 68px;gap:8px;align-items:center;padding:3px 12px;font-size:0.75rem;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">'
+      +'<span style="color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+p.name+'">'+p.name+'</span>'
+      +'<span id="cpu-'+p.pid+'" style="text-align:center;color:#aaa;">0.0%</span>'
+      +'<span style="text-align:center;color:#aaa;">'+p.mem.toFixed(1)+' MB</span>'
+      +'<button style="padding:2px 5px;font-size:0.67rem;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.13);color:#ccc;cursor:pointer;" '
+      +'onclick="(function(btn){'
+        +(isExplorer
+          ? 'Kernel.restartExplorer();'
+          : 'if(confirm(\''+warnMsg+'\')){btn.textContent=\'متوقف\';btn.disabled=true;btn.style.color=\'#666\';btn.style.background=\'transparent\';document.getElementById(\''+rowId+'\').style.opacity=\'0.4\';}')
+      +'})(this)">'+stopTxt+'</button>'
+      +'</div>';
+  };
+
+  // رسم الخدمات
+  const svcList=this.el.querySelector('#tm-svc-list');
+  const expList=this.el.querySelector('#tm-explorer-list');
+  if(svcList) svcList.innerHTML=allSvcs.map(p=>mkSvcRow(p,false)).join('');
+  if(expList) expList.innerHTML=mkSvcRow(explorerSvc,true);
+
+  // رسم التطبيقات المفتوحة
+  const refreshApps=()=>{
+    const list=this.el.querySelector('#tm-apps-list');
+    if(!list)return;
+    const wins=[...kernel.windows.values()];
+    if(wins.length===0){list.innerHTML='<div style="padding:6px 12px;font-size:0.75rem;color:rgba(255,255,255,0.3);">لا توجد تطبيقات مفتوحة</div>';return;}
+    list.innerHTML=wins.map(w=>{
+      const cpu=(Math.random()*4).toFixed(1)+'%';
+      const mem=Math.round(20+Math.random()*80)+' MB';
+      return '<div style="display:grid;grid-template-columns:1fr 70px 70px 68px;gap:8px;align-items:center;padding:3px 12px;font-size:0.75rem;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">'
+        +'<span style="color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+w.app.name+'</span>'
+        +'<span style="text-align:center;color:#aaa;">'+cpu+'</span>'
+        +'<span style="text-align:center;color:#aaa;">'+mem+'</span>'
+        +'<button style="padding:2px 5px;font-size:0.67rem;background:rgba(180,30,30,0.2);border:1px solid rgba(200,50,50,0.35);color:#f88;cursor:pointer;" onclick="Kernel.windows.get(\''+w.id+'\').close()">إنهاء</button>'
+        +'</div>';
+    }).join('');
+  };
+
+  // الأداء — CPU name
+  const cpuNameEl=this.el.querySelector('#tm-cpu-name-detail');
+  const cpuCoresEl=this.el.querySelector('#tm-cpu-d-cores');
+  const cpuSpeedEl=this.el.querySelector('#tm-cpu-d-speed');
+  if(cpuNameEl){
+    try{const ua=navigator.userAgent;const m=ua.match(/\(([^)]+)\)/);cpuNameEl.textContent=m?m[1].split(';')[0]:'غير معروف';}catch(e){cpuNameEl.textContent='غير متاح';}
+  }
+  if(cpuCoresEl) cpuCoresEl.textContent=(navigator.hardwareConcurrency||'–')+' نواة';
+  if(cpuSpeedEl) cpuSpeedEl.textContent='–';
+
+  // تاريخ البيانات (60 نقطة)
+  const cpuHistory=new Array(60).fill(0);
+  const ramHistory=new Array(60).fill(0);
+
+  const drawChart=(canvas,history,color)=>{
+    if(!canvas)return;
+    const ctx=canvas.getContext('2d');
+    const w=canvas.width, h=canvas.height;
+    ctx.clearRect(0,0,w,h);
+    // شبكة
+    ctx.strokeStyle='rgba(255,255,255,0.06)';
+    ctx.lineWidth=0.5;
+    for(let i=0;i<=4;i++){ctx.beginPath();ctx.moveTo(0,h/4*i);ctx.lineTo(w,h/4*i);ctx.stroke();}
+    for(let i=0;i<=6;i++){ctx.beginPath();ctx.moveTo(w/6*i,0);ctx.lineTo(w/6*i,h);ctx.stroke();}
+    // رسم
+    ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.beginPath();
+    history.forEach((v,i)=>{
+      const x=i*(w/(history.length-1));
+      const y=h-(v/100)*h;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    // تعبئة
+    ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();
+    ctx.fillStyle=color.replace(')',',0.15)').replace('rgb','rgba');
+    ctx.fill();
+    // mini canvas
+    const miniId=color.includes('120,215')?'#tm-mini-cpu':'#tm-mini-ram';
+    const mini=this.el.querySelector(miniId);
+    if(mini){
+      const mc=mini.getContext('2d');
+      mc.clearRect(0,0,60,30);
+      mc.strokeStyle=color;mc.lineWidth=1;mc.beginPath();
+      history.slice(-20).forEach((v,i)=>{const x=i*(60/19);const y=30-(v/100)*30;i===0?mc.moveTo(x,y):mc.lineTo(x,y);});
+      mc.stroke();
+    }
+  };
+
+  // تحديث دوري
+  const update=()=>{
+    if(!document.body.contains(this.el))return;
+    refreshApps();
+    [...allSvcs, explorerSvc].forEach(p=>{
+      const el=this.el.querySelector('#cpu-'+p.pid);
+      if(el) el.textContent=(Math.random()*3).toFixed(1)+'%';
+    });
+    // CPU
+    const cpuPct=Math.round(3+Math.random()*10);
+    cpuHistory.push(cpuPct); cpuHistory.shift();
+    const cpuBig=this.el.querySelector('#tm-cpu-usage-big');
+    const cpuDPct=this.el.querySelector('#tm-cpu-d-pct');
+    const cpuMiniSub=this.el.querySelector('#tm-ps-cpu-sub');
+    if(cpuBig) cpuBig.textContent=cpuPct+'%';
+    if(cpuDPct) cpuDPct.textContent=cpuPct+'%';
+    if(cpuMiniSub) cpuMiniSub.textContent=cpuPct+'%';
+    drawChart(this.el.querySelector('#tm-chart-cpu'),cpuHistory,'rgb(0,120,215)');
+
+    // RAM
+    let ramUsed=0,ramTotal=0,ramPct=0;
+    if(performance.memory){
+      ramUsed=Math.round(performance.memory.usedJSHeapSize/1048576);
+      ramTotal=Math.round(performance.memory.jsHeapSizeLimit/1048576);
+      ramPct=Math.min(100,Math.round(ramUsed/ramTotal*100));
+    } else {
+      ramPct=Math.round(40+Math.random()*15);
+      ramUsed=Math.round(ramPct*8);
+      ramTotal=800;
+    }
+    ramHistory.push(ramPct); ramHistory.shift();
+    const ramBig=this.el.querySelector('#tm-ram-usage-big');
+    const ramMiniSub=this.el.querySelector('#tm-ps-ram-sub');
+    const ramDUsed=this.el.querySelector('#tm-ram-d-used');
+    const ramDAvail=this.el.querySelector('#tm-ram-d-avail');
+    const ramDTotal=this.el.querySelector('#tm-ram-d-total');
+    const ramDPct=this.el.querySelector('#tm-ram-d-pct');
+    if(ramBig) ramBig.textContent=ramUsed+' MB';
+    if(ramMiniSub) ramMiniSub.textContent=ramUsed+' MB';
+    if(ramDUsed) ramDUsed.textContent=ramUsed+' MB';
+    if(ramDAvail) ramDAvail.textContent=(ramTotal-ramUsed)+' MB';
+    if(ramDTotal) ramDTotal.textContent=ramTotal+' MB';
+    if(ramDPct) ramDPct.textContent=ramPct+'%';
+    drawChart(this.el.querySelector('#tm-chart-ram'),ramHistory,'rgb(39,174,96)');
+
+    // الشبكة
+    const netBig=this.el.querySelector('#tm-net-big');
+    const netDetail=this.el.querySelector('#tm-net-detail');
+    const netMiniSub=this.el.querySelector('#tm-ps-net-sub');
+    if(navigator.onLine){
+      if(netBig) netBig.innerHTML='<span style="color:#27ae60;">● متصل</span>';
+      if(netDetail) netDetail.innerHTML='<div>النوع: '+( navigator.connection?navigator.connection.effectiveType||'–':'–')+'</div><div>السرعة التقديرية: '+(navigator.connection&&navigator.connection.downlink?navigator.connection.downlink+' Mbps':'–')+'</div>';
+      if(netMiniSub) netMiniSub.textContent='متصل';
+    } else {
+      if(netBig) netBig.innerHTML='<span style="color:#e74c3c;">● غير متصل</span>';
+      if(netDetail) netDetail.innerHTML='';
+      if(netMiniSub) netMiniSub.textContent='غير متصل';
+    }
+    setTimeout(update,2000);
+  };
+  update();
+
+  // تبديل التبويبات الرئيسية
+  this.tmSwitchTab=(tab)=>{
+    ['processes','performance','users'].forEach(t=>{
+      const tabEl=this.el.querySelector('#tm-tab-'+t);
+      const pageEl=this.el.querySelector('#tm-page-'+t);
+      if(tabEl) tabEl.className='tm-tab'+(t===tab?' tm-tab-active':'');
+      if(pageEl){pageEl.style.display=t===tab?'flex':'none';}
+    });
+    if(tab==='users') this.renderUsersTab();
+  };
+  this.renderUsersTab=()=>{
+    const acc=kernel.account;
+    const wins=[...kernel.windows.values()];
+    const sessionSec=Math.floor((Date.now()-(kernel.sessionStart||Date.now()))/1000);
+    const hh=Math.floor(sessionSec/3600).toString().padStart(2,'0');
+    const mm=Math.floor((sessionSec%3600)/60).toString().padStart(2,'0');
+    const ss=(sessionSec%60).toString().padStart(2,'0');
+    const memMB=performance.memory?Math.round(performance.memory.usedJSHeapSize/1024/1024)+'MB':'N/A';
+    const c=this.el.querySelector('#tm-users-content');
+    if(!c)return;
+    c.innerHTML=`<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);padding:16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:rgba(0,120,215,0.3);display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="#8ab4f8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        <div>
+          <div style="font-size:1rem;font-weight:600;color:#fff;">${acc?acc.username:'مجهول'}</div>
+          <div style="font-size:0.72rem;color:#27ae60;">● نشط</div>
+        </div>
+        <div style="margin-right:auto;text-align:left;">
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);">وقت الجلسة</div>
+          <div style="font-size:0.9rem;color:#fff;font-family:Consolas;">${hh}:${mm}:${ss}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;">
+        <div style="background:rgba(255,255,255,0.04);padding:10px;text-align:center;">
+          <div style="font-size:1.3rem;font-weight:300;color:#8ab4f8;">${wins.length}</div>
+          <div style="font-size:0.68rem;color:rgba(255,255,255,0.4);">تطبيقات مفتوحة</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);padding:10px;text-align:center;">
+          <div style="font-size:1.3rem;font-weight:300;color:#8ab4f8;">${wins.filter(w=>!w.minimized).length}</div>
+          <div style="font-size:0.68rem;color:rgba(255,255,255,0.4);">نشطة</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);padding:10px;text-align:center;">
+          <div style="font-size:1.3rem;font-weight:300;color:#8ab4f8;">${memMB}</div>
+          <div style="font-size:0.68rem;color:rgba(255,255,255,0.4);">الذاكرة</div>
+        </div>
+      </div>
+      ${wins.length>0?`<div style="font-size:0.72rem;color:rgba(255,255,255,0.35);margin-top:4px;">التطبيقات المفتوحة: ${wins.map(w=>w.app.name).join('، ')}</div>`:''}
+    </div>`;
+  };
+
+  // تبديل قسم الأداء
+  this.tmPerfSelect=(type)=>{
+    ['cpu','ram','net'].forEach(t=>{
+      const sideEl=this.el.querySelector('#tm-ps-'+t);
+      const detEl=this.el.querySelector('#tm-detail-'+t);
+      if(sideEl) sideEl.className='tm-perf-side'+(t===type?' tm-perf-side-active':'');
+      if(detEl){detEl.style.display=t===type?'flex':'none';}
+    });
+  };
+}
+
+buildIEContent() {
+  return `
+  <div class="ie-toolbar">
+    <div class="ie-nav-btns">
+      <button class="ie-nav-btn" id="ie-back-${this.id}" title="Back">&#9664;</button>
+      <button class="ie-nav-btn" id="ie-fwd-${this.id}" title="Forward">&#9654;</button>
+      <button class="ie-nav-btn" id="ie-reload-${this.id}" title="Refresh">&#8635;</button>
+      <button class="ie-nav-btn ie-home-btn" id="ie-home-${this.id}" title="Home">🏠</button>
+    </div>
+    <div class="ie-address-bar">
+      <div class="ie-lock-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="#aaa"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></div>
+      <input class="ie-address-input" id="ie-addr-${this.id}" type="text" value="https://www.google.com" spellcheck="false">
+      <button class="ie-go-btn" id="ie-go-${this.id}">انتقال</button>
+    </div>
+  </div>
+  <div class="ie-menu-bar">
+    <span class="ie-menu-item">ملف</span>
+    <span class="ie-menu-item">تحرير</span>
+    <span class="ie-menu-item">عرض</span>
+    <span class="ie-menu-item">المفضلة</span>
+    <span class="ie-menu-item">أدوات</span>
+    <span class="ie-menu-item">تعليمات</span>
+  </div>
+  <div class="ie-frame-container" style="position:relative;">
+    <div id="ie-loading-${this.id}" style="display:none;position:absolute;top:0;left:0;width:100%;height:3px;background:#e0e0e0;z-index:10;">
+      <div id="ie-loading-bar-${this.id}" style="height:100%;background:#0078D7;width:0%;transition:width 2s linear;"></div>
+    </div>
+    <iframe class="ie-frame" id="ie-frame-${this.id}" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>
+    <div class="ie-placeholder" id="ie-placeholder-${this.id}">
+      <div class="ie-placeholder-inner">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/1/18/Internet_Explorer_10%2B11_logo.svg" style="width:72px;margin-bottom:20px;opacity:0.7;">
+        <div class="ie-placeholder-title">Internet Explorer</div>
+        <div class="ie-placeholder-sub">أدخل عنوان موقع في شريط العناوين<br>واضغط <b>انتقال</b> أو <b>Enter</b></div>
+      </div>
+    </div>
+    <div class="ie-blocked" id="ie-blocked-${this.id}" style="display:none;">
+      <div class="ie-blocked-inner">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/1/18/Internet_Explorer_10%2B11_logo.svg" style="width:64px;margin-bottom:16px;">
+        <div class="ie-blocked-title">لا يمكن عرض صفحة الويب</div>
+        <div class="ie-blocked-sub">تعذّر الوصول إلى الصفحة المطلوبة.</div>
+        <div class="ie-blocked-url" id="ie-blocked-url-${this.id}"></div>
+        <hr style="border-color:#ccc;margin:14px 0;">
+        <div class="ie-blocked-hint">• قد يرفض الموقع عرضه داخل إطار<br>• جرّب موقعاً آخر<br>• تأكد من صحة العنوان</div>
+        <button onclick="window.open(document.getElementById('ie-addr-${this.id}').value,'_blank')" style="margin-top:12px;padding:6px 20px;background:#0078D7;color:#fff;border:none;cursor:pointer;font-size:0.8rem;font-family:Segoe UI,sans-serif;">فتح في تبويب جديد</button>
+      </div>
+    </div>
+  </div>
+  <div class="ie-statusbar">
+    <span id="ie-status-${this.id}">جاهز</span>
+    <span style="margin-right:auto;">Internet Explorer</span>
+    <span>🛡️ منطقة الإنترنت &nbsp; 100% ▾</span>
+  </div>`;
+}
+
+buildControlPanelContent() {
+  const items=[
+    {icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="#aaa"><path d="M20 3H4a2 2 0 00-2 2v14a2 2 0 002 2h16a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H4V8h16v11zm0-13H4V5h16v1z"/></svg>', name:'ميزات Windows', desc:'تشغيل ميزات Windows أو إيقافها', id:'winfeatures'},
+    {icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="#aaa"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>', name:'مستكشف الأخطاء وإصلاحها', desc:'البحث عن مشكلات النظام وإصلاحها', id:'troubleshoot'},
+  ];
+  return '<div style="height:100%;font-family:Segoe UI,sans-serif;color:#ddd;display:flex;flex-direction:column;">'
+    +'<div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.08);font-size:0.75rem;color:rgba(255,255,255,0.4);">لوحة التحكم › كل عناصر لوحة التحكم</div>'
+    +'<div style="flex:1;padding:14px;display:flex;flex-direction:column;gap:4px;">'
+    +items.map(it=>'<div onclick="Kernel.launchApp(\''+it.id+'\');" style="display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer;border:1px solid transparent;" onmouseover="this.style.background=\'rgba(255,255,255,0.07)\';this.style.borderColor=\'rgba(255,255,255,0.1)\'" onmouseout="this.style.background=\'transparent\';this.style.borderColor=\'transparent\'">'
+      +'<span style="font-size:1.3rem;min-width:28px;text-align:center;">'+it.icon+'</span>'
+      +'<div><div style="font-size:0.82rem;color:#8ab4f8;">'+it.name+'</div>'
+      +'<div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-top:2px;">'+it.desc+'</div></div>'
+      +'</div>').join('')
+    +'</div></div>';
+}
+
+buildTroubleshootContent() {
+  const wid=this.id;
+  return '<div id="ts-wrap" style="background:#f0f0f0;height:100%;display:flex;flex-direction:column;font-family:Segoe UI,sans-serif;color:#000;">'
+    +'<div style="background:linear-gradient(180deg,#f0f0f0,#dcdcdc);padding:10px 14px;border-bottom:1px solid #aaa;display:flex;align-items:center;gap:8px;">'
+    +'<svg viewBox="0 0 24 24" width="20" height="20" fill="#aaa"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>'
+    +'<div><div style="font-size:0.85rem;font-weight:600;">مستكشف الأخطاء وإصلاحها</div>'
+    +'<div style="font-size:0.72rem;color:#555;">البحث التلقائي عن مشكلات النظام وإصلاحها</div></div>'
+    +'</div>'
+    +'<div style="flex:1;padding:14px;overflow-y:auto;">'
+    +'<div style="background:#fff;border:1px solid #ccc;padding:10px 14px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background=\'#cce8ff\'" onmouseout="this.style.background=\'#fff\'" onclick="Kernel.windows.get(\''+wid+'\').runTroubleshoot(\'drivers\')">'
+    +'<span style="font-size:1.5rem;">🖨️</span><div><div style="font-size:0.82rem;color:#003399;text-decoration:underline;">مستكشف أخطاء التعاريف والأجهزة</div><div style="font-size:0.72rem;color:#555;">البحث عن مشكلات في تعاريف الأجهزة</div></div></div>'
+    +'<div style="background:#fff;border:1px solid #ccc;padding:10px 14px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background=\'#cce8ff\'" onmouseout="this.style.background=\'#fff\'" onclick="Kernel.windows.get(\''+wid+'\').runTroubleshoot(\'system\')">'
+    +'<svg viewBox="0 0 24 24" width="22" height="22" fill="#aaa"><path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg><div><div style="font-size:0.82rem;color:#003399;text-decoration:underline;">مستكشف أخطاء النظام</div><div style="font-size:0.72rem;color:#555;">الكشف عن مشكلات ملفات النظام وإصلاحها</div></div></div>'
+    +'<div style="background:#fff;border:1px solid #ccc;padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background=\'#cce8ff\'" onmouseout="this.style.background=\'#fff\'" onclick="Kernel.windows.get(\''+wid+'\').runTroubleshoot(\'performance\')">'
+    +'<span style="font-size:1.5rem;">⚡</span><div><div style="font-size:0.82rem;color:#003399;text-decoration:underline;">مستكشف أخطاء الأداء</div><div style="font-size:0.72rem;color:#555;">تحسين أداء الجهاز وإيجاد المشكلات</div></div></div>'
+    +'</div>'
+    +'<div id="ts-result-'+wid+'" style="display:none;padding:0 14px 14px;"></div>'
+    +'</div>';
+}
+
+runTroubleshoot(type) {
+  const wid=this.id;
+  const resultEl=this.el.querySelector('#ts-result-'+wid);
+  const issues={
+    drivers:  [{ sev:'warn',  msg:'تعريف بطاقة الشبكة قديم — يُنصح بالتحديث' }, { sev:'ok',   msg:'تعريف الصوت يعمل بشكل صحيح' }, { sev:'ok',   msg:'تعريف الشاشة سليم' }],
+    system:   [{ sev:'warn',  msg:'ملف النظام kernel32.dll تالف — تم إصلاحه' }, { sev:'ok',   msg:'سجل Windows سليم' }, { sev:'error', msg:'خدمة Windows Update متوقفة — تم تشغيلها' }],
+    performance:[{ sev:'warn', msg:'ذاكرة الوصول العشوائي ممتلئة بنسبة 87%' }, { sev:'ok',   msg:'وحدة المعالجة المركزية تعمل بكفاءة' }, { sev:'error', msg:'تشغيل تلقائي لتطبيقات كثيرة — تم تعطيلها' }]
+  };
+  const found=issues[type]||[];
+  const colors={ ok:'#27ae60', warn:'#e67e22', error:'#c0392b' };
+  const icons={ ok:'<svg viewBox="0 0 24 24" width="14" height="14" fill="#27ae60"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>', warn:'<svg viewBox="0 0 24 24" width="14" height="14" fill="#e67e22"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>', error:'<svg viewBox="0 0 24 24" width="14" height="14" fill="#e74c3c"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>' };
+  // إظهار شاشة الفحص
+  resultEl.style.display='block';
+  resultEl.innerHTML='<div style="background:#fff;border:1px solid #ccc;padding:12px 14px;">'
+    +'<div style="font-size:0.82rem;font-weight:600;margin-bottom:10px;">جارٍ الفحص...</div>'
+    +'<div id="ts-progress-'+wid+'" style="height:4px;background:#e0e0e0;overflow:hidden;margin-bottom:12px;"><div id="ts-bar-'+wid+'" style="height:100%;background:#0078D7;width:0%;transition:width 2s linear;"></div></div>'
+    +'<div id="ts-items-'+wid+'"></div>'
+    +'</div>';
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ this.el.querySelector('#ts-bar-'+wid).style.width='100%'; }); });
+  // إظهار النتائج تدريجياً
+  found.forEach((item,i)=>{
+    setTimeout(()=>{
+      const el=this.el.querySelector('#ts-items-'+wid);
+      if(!el)return;
+      el.innerHTML+='<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:0.78rem;">'
+        +'<span style="color:'+colors[item.sev]+';font-size:0.9rem;">'+icons[item.sev]+'</span>'
+        +'<span>'+item.msg+'</span></div>';
+    }, 700*(i+1));
+  });
+  // بعد الفحص → زر إعادة التشغيل
+  setTimeout(()=>{
+    const el=this.el.querySelector('#ts-items-'+wid);
+    if(!el)return;
+    const hasIssue=found.some(f=>f.sev!=='ok');
+    el.innerHTML+='<div style="margin-top:12px;padding:8px;background:'+(hasIssue?'#fff3cd':'#d4edda')+';border:1px solid '+(hasIssue?'#ffc107':'#c3e6cb')+';font-size:0.78rem;color:'+(hasIssue?'#856404':'#155724')+';">'
+      +(hasIssue?'<svg viewBox="0 0 24 24" width="14" height="14" fill="#e67e22"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg> تم اكتشاف مشكلات وإصلاحها. يُنصح بإعادة التشغيل لتطبيق الإصلاحات.':'<svg viewBox="0 0 24 24" width="14" height="14" fill="#27ae60"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> لم يتم اكتشاف أي مشكلات.')+'</div>';
+    if(hasIssue){
+      el.innerHTML+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">'
+        +'<button onclick="Kernel.windows.get(\''+wid+'\').close()" style="padding:5px 16px;background:#f0f0f0;border:1px solid #adadad;font-size:0.78rem;cursor:pointer;font-family:Segoe UI,sans-serif;">لاحقاً</button>'
+        +'<button onclick="Kernel.winFeaturesRestart(false);Kernel.windows.get(\''+wid+'\').close();" style="padding:5px 16px;background:#0078D7;color:#fff;border:1px solid #0078D7;font-size:0.78rem;cursor:pointer;font-family:Segoe UI,sans-serif;">إعادة التشغيل الآن</button>'
+        +'</div>';
+    }
+  }, 700*(found.length+1));
+}
+
+buildWinFeaturesContent() {
+  const f=this.kernel.features;
+  const chkSearch=f.searchEnabled?'checked':'';
+  const chkIE=f.ieEnabled?'checked':'';
+  const wid=this.id;
+  return '<div id="wf-wrap" style="background:#f0f0f0;height:100%;display:flex;flex-direction:column;font-family:Segoe UI,sans-serif;font-size:0.82rem;color:#000;">'
+    // هيدر
+    +'<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px 10px;background:#f0f0f0;border-bottom:1px solid #ccc;">'
+    +'<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg/960px-Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg.png" style="width:32px;height:32px;margin-top:2px;">'
+    +'<div><div style="font-size:0.88rem;font-weight:600;margin-bottom:3px;">تشغيل ميزات Windows أو إيقافها</div>'
+    +'<div style="font-size:0.75rem;color:#444;line-height:1.4;">لتشغيل ميزة، حدد خانة الاختيار الخاصة بها. لإيقافها، قم بإلغاء تحديد خانة الاختيار.</div></div>'
+    +'</div>'
+    // قائمة الميزات
+    +'<div style="flex:1;background:#fff;border:1px solid #999;margin:0 12px 8px;overflow-y:auto;">'
+    // عنصر البحث
+    +'<div style="display:flex;align-items:center;gap:0;padding:4px 6px;border-bottom:1px solid #e0e0e0;cursor:pointer;" onclick="this.querySelector(\'input\').click()">'
+    +'<div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;margin-left:4px;">'
+    +'<input type="checkbox" id="wf-search-'+wid+'" '+chkSearch+' style="width:13px;height:13px;cursor:pointer;" onclick="event.stopPropagation()">'
+    +'</div>'
+    +'<div style="width:18px;height:18px;background:url(\'https://cdn-icons-png.flaticon.com/512/622/622669.png\') center/contain no-repeat;margin-left:4px;filter:none;"></div>'
+    +'<span style="margin-right:6px;font-size:0.82rem;">شريط البحث في Windows</span>'
+    +'</div>'
+    // عنصر IE
+    +'<div style="display:flex;align-items:center;gap:0;padding:4px 6px;cursor:pointer;" onclick="this.querySelector(\'input\').click()">'
+    +'<div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;margin-left:4px;">'
+    +'<input type="checkbox" id="wf-ie-'+wid+'" '+chkIE+' style="width:13px;height:13px;cursor:pointer;" onclick="event.stopPropagation()">'
+    +'</div>'
+    +'<img src="https://upload.wikimedia.org/wikipedia/commons/1/18/Internet_Explorer_10%2B11_logo.svg" style="width:16px;height:16px;margin-left:4px;">'
+    +'<span style="margin-right:6px;font-size:0.82rem;">Internet Explorer 11</span>'
+    +'</div>'
+    +'</div>'
+    // تذييل الأزرار
+    +'<div style="display:flex;justify-content:flex-end;gap:6px;padding:6px 12px 12px;">'
+    +'<button onclick="Kernel.windows.get(\''+wid+'\').applyWinFeatures()" style="padding:5px 20px;background:#0078D7;color:#fff;border:1px solid #0078D7;font-size:0.8rem;cursor:pointer;font-family:Segoe UI,sans-serif;">موافق</button>'
+    +'<button onclick="Kernel.windows.get(\''+wid+'\').close()" style="padding:5px 20px;background:#f0f0f0;color:#000;border:1px solid #adadad;font-size:0.8rem;cursor:pointer;font-family:Segoe UI,sans-serif;">إلغاء الأمر</button>'
+    +'</div>'
+    +'</div>';
+}
+
+applyWinFeatures() {
+  const wid=this.id;
+  const searchCb=this.el.querySelector('#wf-search-'+wid);
+  const ieCb=this.el.querySelector('#wf-ie-'+wid);
+  const newSearch=searchCb.checked;
+  const newIE=ieCb.checked;
+  const changed=(newSearch!==this.kernel.features.searchEnabled)||(newIE!==this.kernel.features.ieEnabled);
+  if(!changed){this.close();return;}
+  const isAdding=(newSearch&&!this.kernel.features.searchEnabled)||(newIE&&!this.kernel.features.ieEnabled);
+  this.kernel.features.searchEnabled=newSearch;
+  this.kernel.features.ieEnabled=newIE;
+  // استبدال محتوى النافذة بصفحة التحميل
+  const content=this.el.querySelector('.window-content');
+  content.style.padding='0';
+  content.innerHTML='<div style="background:#f0f0f0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Segoe UI,sans-serif;gap:18px;padding:30px;">'
+    +'<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg/960px-Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg.png" style="width:48px;height:48px;">'
+    +'<div style="font-size:0.88rem;font-weight:600;color:#000;">يتم تطبيق التغييرات على الميزات...</div>'
+    +'<div style="width:100%;background:#e0e0e0;height:6px;overflow:hidden;">'
+    +'<div id="wf-apply-bar" style="height:100%;background:#27ae60;width:0%;transition:width 2.5s cubic-bezier(0.4,0,0.2,1);"></div>'
+    +'</div>'
+    +'<div id="wf-apply-btns" style="display:none;flex-direction:column;align-items:center;gap:10px;width:100%;">'
+    +'<div style="font-size:0.8rem;color:#333;text-align:center;">اكتمل التطبيق. أعد تشغيل الكمبيوتر لإكمال التغييرات.</div>'
+    +'<div style="display:flex;gap:8px;justify-content:center;margin-top:4px;">'
+    +'<button id="wf-later-btn" style="padding:5px 20px;background:#f0f0f0;border:1px solid #adadad;font-size:0.8rem;cursor:pointer;font-family:Segoe UI,sans-serif;">إلغاء الأمر</button>'
+    +'<button id="wf-restart-btn" style="padding:5px 20px;background:#0078D7;color:#fff;border:1px solid #0078D7;font-size:0.8rem;cursor:pointer;font-family:Segoe UI,sans-serif;">إعادة التشغيل الآن</button>'
+    +'</div></div>'
+    +'</div>';
+  // تشغيل شريط التحميل
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{
+    this.el.querySelector('#wf-apply-bar').style.width='100%';
+  });});
+  // بعد 2.5 ثانية يختفي الشريط وتظهر الأزرار
+  setTimeout(()=>{
+    const bar=this.el.querySelector('#wf-apply-bar');
+    if(bar){ bar.style.transition='opacity 0.4s'; bar.style.opacity='0'; }
+    const btns=this.el.querySelector('#wf-apply-btns');
+    if(btns) btns.style.display='flex';
+    const laterBtn=this.el.querySelector('#wf-later-btn');
+    const restartBtn=this.el.querySelector('#wf-restart-btn');
+    if(laterBtn) laterBtn.onclick=()=>{ this.close(); this.kernel.applyFeatures(); };
+    if(restartBtn) restartBtn.onclick=()=>{ this.close(); this.kernel.winFeaturesRestart(isAdding); };
+  }, 2600);
+}
+
+initIE() {
+  const id=this.id;
+  const frame=this.el.querySelector(`#ie-frame-${id}`);
+  const addr=this.el.querySelector(`#ie-addr-${id}`);
+  const status=this.el.querySelector(`#ie-status-${id}`);
+  const blocked=this.el.querySelector(`#ie-blocked-${id}`);
+  const blockedUrl=this.el.querySelector(`#ie-blocked-url-${id}`);
+  const placeholder=this.el.querySelector(`#ie-placeholder-${id}`);
+  const loadingWrap=this.el.querySelector(`#ie-loading-${id}`);
+  const loadingBar=this.el.querySelector(`#ie-loading-bar-${id}`);
+
+  const navigate=(url)=>{
+    let u=url.trim();
+    if(!u)return;
+    if(!/^https?:\/\//i.test(u)) u='https://'+u;
+    addr.value=u;
+    blockedUrl.textContent=u;
+    placeholder.style.display='none';
+    blocked.style.display='none';
+    frame.style.display='block';
+    // شريط تحميل
+    loadingWrap.style.display='block';
+    loadingBar.style.width='0%';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ loadingBar.style.width='85%'; }));
+    status.textContent='جارٍ الاتصال بـ '+u+'...';
+    // استخدام allorigins proxy
+    const proxy='https://api.allorigins.win/raw?url='+encodeURIComponent(u);
+    frame.src=proxy;
+    let timer=setTimeout(()=>{
+      frame.style.display='none';
+      blocked.style.display='flex';
+      loadingWrap.style.display='none';
+      status.textContent='تعذّر عرض الصفحة';
+    },12000);
+    frame.onload=()=>{
+      clearTimeout(timer);
+      loadingBar.style.transition='width 0.3s';
+      loadingBar.style.width='100%';
+      setTimeout(()=>{ loadingWrap.style.display='none'; loadingBar.style.width='0%'; loadingBar.style.transition='width 2s linear'; },400);
+      status.textContent='تم';
+    };
+    frame.onerror=()=>{
+      clearTimeout(timer);
+      frame.style.display='none';
+      blocked.style.display='flex';
+      loadingWrap.style.display='none';
+      status.textContent='تعذّر عرض الصفحة';
+    };
+  };
+
+  this.el.querySelector(`#ie-go-${id}`).onclick=()=>navigate(addr.value);
+  addr.onkeydown=(e)=>{if(e.key==='Enter')navigate(addr.value);};
+  this.el.querySelector(`#ie-back-${id}`).onclick=()=>{try{frame.contentWindow.history.back();}catch(e){}};
+  this.el.querySelector(`#ie-fwd-${id}`).onclick=()=>{try{frame.contentWindow.history.forward();}catch(e){}};
+  this.el.querySelector(`#ie-reload-${id}`).onclick=()=>{ if(addr.value&&addr.value!=='about:blank') navigate(addr.value); };
+  this.el.querySelector(`#ie-home-${id}`).onclick=()=>navigate('https://www.google.com');
+  this.rect={x:80,y:30,w:800,h:520};this.applyRect();
+}
+
+initTerminal() {
+  const input=this.el.querySelector(`#in-${this.id}`),output=this.el.querySelector(`#out-${this.id}`),container=this.el.querySelector('.terminal-container');
+  const p=this.isAdmin?"C:\\Windows\\System32>":"C:\\Users\\User>";
+  container.onclick=()=>input.focus();
+  let tabIndex=-1;
+  const CMDS=['help','cls','ver','dir','exit','sysinfo','tasklist','netstat','repair','/open "'];
+  input.onkeydown=e=>{
+    if(e.key==='Enter'){
+      tabIndex=-1;
+      const val=input.value;
+      output.innerText+=`${p}${val}\n`;
+      this.exec(val.trim().toLowerCase(),output);
+      input.value='';
+      container.scrollTop=container.scrollHeight;
+    } else if(e.key==='Tab'){
+      e.preventDefault();
+      tabIndex=(tabIndex+1)%CMDS.length;
+      input.value=CMDS[tabIndex];
+    } else {
+      tabIndex=-1;
+    }
+  };
+}
+
+exec(cmd,out) {
+  const raw=cmd.trim();
+  const lower=raw.toLowerCase();
+  const kernel=this.kernel;
+  // /open "AppName"
+  if(lower.startsWith('/open ')||lower.startsWith('open ')){
+    const match=raw.match(/["'](.+?)["']|(\S+)$/);
+    const appName=match?(match[1]||match[2]):'';
+    const found=APPS_DATA.find(a=>a.name.toLowerCase()===appName.toLowerCase()||a.id.toLowerCase()===appName.toLowerCase());
+    if(found){kernel.launchApp(found.id);out.innerText+=`جارٍ فتح ${found.name}...\n`;}
+    else out.innerText+=`لم يتم العثور على تطبيق: "${appName}"\nالتطبيقات المتاحة: ${APPS_DATA.filter(a=>!a._hidden).map(a=>a.name).join(', ')}\n`;
+    return;
+  }
+  if(lower==='help')out.innerText+=`الأوامر المتاحة:\n  help           — عرض المساعدة\n  cls            — مسح الشاشة\n  ver            — إصدار النظام\n  dir            — عرض الملفات\n  exit           — إغلاق النافذة\n  sysinfo        — معلومات النظام\n  tasklist       — عرض العمليات\n  netstat        — حالة الشبكة\n  repair         — فحص وإصلاح ملفات النظام\n  /open "App"    — فتح تطبيق بالاسم\n`;
+  else if(lower==='cls')out.innerText='';
+  else if(lower==='ver')out.innerText+=`REW OS [Version 9.0.0]\n(c) Faisal SS505. All rights reserved.\n`;
+  else if(lower==='dir')out.innerText+=` Volume in drive C is REW OS\n Directory of C:\\Users\\User\n\n  .               <DIR>\n  ..              <DIR>\n  Desktop         <DIR>\n  Documents       <DIR>\n  Downloads       <DIR>\n  AppData         <DIR>\n`;
+  else if(lower==='exit')this.close();
+  else if(lower==='sysinfo'){
+    out.innerText+=`System Information\n==================\nOS Name:         REW OS Build 9.0\nOS Version:      9.0.0\nSystem Type:     Web-based x64\nProcessor:       ${navigator.hardwareConcurrency||'N/A'} Logical Cores\nBrowser:         ${navigator.userAgent.split(') ')[0].split('(')[1]||'Unknown'}\nLanguage:        ${navigator.language||'ar'}\nOnline:          ${navigator.onLine?'Yes':'No'}\n`;
+  }
+  else if(lower==='tasklist'){
+    const wins=[...kernel.windows.values()];
+    out.innerText+=`Image Name                     PID Status\n${'='.repeat(50)}\n`;
+    wins.forEach(w=>out.innerText+=`${w.app.name.padEnd(30)} ${w.id.slice(-4).padEnd(5)} ${w.minimized?'Suspended':'Running'}\n`);
+    if(wins.length===0)out.innerText+='(لا توجد عمليات نشطة)\n';
+  }
+  else if(lower==='netstat'){
+    out.innerText+=`Network Status\n==============\nConnection: ${navigator.onLine?'Connected':'Disconnected'}\nType:       ${navigator.connection?navigator.connection.effectiveType||'N/A':'N/A'}\nDownlink:   ${navigator.connection&&navigator.connection.downlink?navigator.connection.downlink+' Mbps':'N/A'}\n`;
+  }
+  else if(lower==='repair'){
+    const steps=[
+      {t:300, msg:'Starting System File Checker...'},
+      {t:900, msg:'Scanning C:\\Windows\\System32...'},
+      {t:1800, msg:'[██░░░░░░░░] 20% - Checking kernel files...'},
+      {t:2600, msg:'[████░░░░░░] 40% - Verifying DLL integrity...'},
+      {t:3400, msg:'[██████░░░░] 60% - Checking registry entries...'},
+      {t:4200, msg:'[████████░░] 80% - Validating boot sector...'},
+      {t:5000, msg:'[██████████] 100% - Scan complete.'},
+      {t:5400, msg:'Windows Resource Protection did not find any integrity violations.'},
+      {t:5700, msg:'\nSystem is healthy. No repairs needed.\n'},
+    ];
+    steps.forEach(s=>setTimeout(()=>{if(document.body.contains(this.el))out.innerText+=s.msg+'\n';out.scrollTop=out.scrollHeight;},s.t));
+  }
+  else if(raw!=='') out.innerText+=`'${raw}' is not recognized as an internal or external command.\n`;
+}
+applyRect() { if(this.maximized){this.el.style.top='0';this.el.style.left='0';this.el.style.width='100vw';this.el.style.height='calc(100vh - 40px)';}else{this.el.style.top=this.rect.y+'px';this.el.style.left=this.rect.x+'px';this.el.style.width=this.rect.w+'px';this.el.style.height=this.rect.h+'px';} }
+focus() { this.el.style.zIndex=++this.kernel.topZ;this.kernel.syncTaskbar(); }
+minimize() { this.minimized=true;this.el.classList.add('closing-win');setTimeout(()=>{this.el.style.display='none';this.kernel.syncTaskbar();},200); }
+restore() { this.minimized=false;this.el.style.display='flex';requestAnimationFrame(()=>{this.el.classList.remove('closing-win');this.el.classList.add('active-win');});this.focus(); }
+toggleMax() { this.maximized=!this.maximized;this.applyRect(); }
+close() { this.el.classList.add('closing-win');setTimeout(()=>{this.el.remove();this.kernel.windows.delete(this.id);this.kernel.syncTaskbar();},200); }
+
+startDrag(e) {
+  if(this.maximized){this.maximized=false;this.rect.x=(window.innerWidth/2)-(this.rect.w/2);this.rect.y=e.clientY-15;this.applyRect();}
+  this.el.classList.add('dragging');let ox=e.clientX-this.el.offsetLeft,oy=e.clientY-this.el.offsetTop;
+  const snap=document.getElementById('snap-preview');let sType=null;
+  const move=ev=>{let nx=ev.clientX-ox,ny=ev.clientY-oy;snap.style.display='block';if(ev.clientY<=5){sType='top';snap.style.cssText='display:block;opacity:1;top:0;left:0;width:100vw;height:calc(100vh - 40px);';}else if(ev.clientX<=5){sType='left';snap.style.cssText='display:block;opacity:1;top:0;left:0;width:50vw;height:calc(100vh - 40px);';}else if(ev.clientX>=window.innerWidth-5){sType='right';snap.style.cssText='display:block;opacity:1;top:0;left:50vw;width:50vw;height:calc(100vh - 40px);';}else{sType=null;snap.style.opacity='0';}const maxX=window.innerWidth-this.rect.w,maxY=window.innerHeight-40-32;if(nx<0)nx=0;if(nx>maxX)nx=maxX;if(ny<0)ny=0;if(ny>maxY)ny=maxY;this.rect.x=nx;this.rect.y=ny;this.applyRect();};
+  const up=()=>{this.el.classList.remove('dragging');snap.style.opacity='0';setTimeout(()=>snap.style.display='none',200);if(sType==='top'){this.maximized=true;this.applyRect();}else if(sType==='left'||sType==='right'){this.maximized=false;this.rect.w=window.innerWidth/2;this.rect.h=window.innerHeight-40;this.rect.y=0;this.rect.x=(sType==='left')?0:window.innerWidth/2;this.applyRect();this.kernel.showSnapAssist(sType,this.id);}window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',up);};
+  window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+}
+}
+
+window.onload=()=>{
+  // REW OS — Powered by Faisal SS505 © 2025
+  window.Kernel=new OSKernel();
+  const boot=document.getElementById('boot-screen');
+  const logo=document.getElementById('boot-logo');
+  const loader=document.getElementById('boot-loader-wrap');
+  setTimeout(()=>{ logo.style.opacity='1'; }, 3000);
+  setTimeout(()=>{ loader.style.opacity='1'; }, 4000);
+  setTimeout(()=>{
+    // 1. دائرة تختفي سريع
+    loader.style.transition='opacity 0.4s ease';
+    loader.style.opacity='0';
+    // 2. شعار يختفي بتدريج سريع→بطيء
+    setTimeout(()=>{
+      logo.style.transition='opacity 0.9s cubic-bezier(0.8,0,1,1)';
+      logo.style.opacity='0';
+      // 3. بعد اختفاء الشعار → توجيه
+      setTimeout(()=>{
+        boot.style.display='none';
+        document.body.style.cursor='';
+        // لو ما عنده حساب → OOBE، لو عنده → Login
+        if(!window.Kernel.account){
+          window.Kernel.initOOBE();
+        } else {
+          window.Kernel.showLoginScreen();
+        }
+      }, 950);
+    }, 400);
+  }, 7100);
+};
+</script>
+
+<div id="power-popup">
+  <div class="power-item" onclick="Kernel.shutdown()">إيقاف التشغيل <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg></div>
+  <div class="power-item" onclick="Kernel.softRestart()">إعادة التشغيل <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></div>
+</div>
+</body>
+</html>

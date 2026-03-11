@@ -1,0 +1,2155 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LXR OS</title>
+
+<style>
+  :root {
+    --accent: #0078d4;
+    --accent2: #00b4d8;
+    --bg: #1a1a2e;
+    --tile-size: 150px;
+    --tile-small: 70px;
+    --font: 'Segoe UI', 'Segoe UI Historic', 'Segoe UI Emoji', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
+
+  body {
+    font-family: var(--font);
+    background: #000;
+    color: #fff;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ═══════════════════════════════════════════
+     BOOT SCREEN
+  ═══════════════════════════════════════════ */
+  #boot-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #000;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: opacity 0.25s cubic-bezier(0.4,0,1,1);
+  }
+  #boot-screen.fade-out { opacity: 0; pointer-events: none; }
+
+  .boot-logo {
+    width: 200px;
+    animation: bootFade 0.4s ease forwards;
+  }
+  .boot-logo img { width: 100%; object-fit: contain; }
+  .boot-subtitle {
+    font-size: 13px;
+    font-weight: 300;
+    letter-spacing: 4px;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 60px;
+    animation: bootFade 1.2s ease forwards;
+  }
+  .boot-dots {
+    display: flex; gap: 8px;
+    animation: bootFade 1.4s ease forwards;
+  }
+  .boot-dot {
+    width: 8px; height: 8px;
+    border-radius: 0;
+    background: rgba(255,255,255,0.3);
+    animation: dotPulse 1.2s infinite;
+  }
+  .boot-dot:nth-child(2) { animation-delay: 0.15s; }
+  .boot-dot:nth-child(3) { animation-delay: 0.3s; }
+  .boot-dot:nth-child(4) { animation-delay: 0.45s; }
+  .boot-dot:nth-child(5) { animation-delay: 0.6s; }
+
+  @keyframes dotPulse {
+    0%,100% { background: rgba(255,255,255,0.2); transform: scale(0.8); }
+    50% { background: #fff; transform: scale(1); }
+  }
+  @keyframes bootFade {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ═══════════════════════════════════════════
+     LOCK SCREEN
+  ═══════════════════════════════════════════ */
+  #lock-screen {
+    position: fixed; inset: 0; z-index: 999;
+    display: flex; flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 0 60px 36px;
+    transition: transform 0.6s cubic-bezier(0.4,0,0.2,1), opacity 0.6s ease;
+    cursor: pointer;
+  }
+  #lock-screen.slide-up {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .lock-wallpaper {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(0,120,212,0.3) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 70%, rgba(0,180,216,0.18) 0%, transparent 50%),
+      linear-gradient(160deg, #0a0f1e 0%, #111827 50%, #1e3a5f 100%);
+    overflow: hidden;
+  }
+  .lock-wallpaper::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M0 0h40v40H0zm40 40h40v40H40z'/%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* Lock screen logo center */
+  .lock-center-logo {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    opacity: 0.12;
+  }
+  .lock-center-logo img { width: 120px; height: 120px; object-fit: contain; filter: brightness(10); }
+
+  .lock-time-block { text-align: left; position: relative; z-index: 1; }
+  .lock-time {
+    font-size: 86px;
+    font-weight: 100;
+    letter-spacing: -2px;
+    line-height: 1;
+    text-shadow: 0 0 40px rgba(0,120,212,0.4);
+  }
+  .lock-date {
+    font-size: 16px;
+    font-weight: 300;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.65);
+    margin-top: 6px;
+  }
+
+  .lock-notifs {
+    display: flex; flex-direction: column; gap: 8px;
+    width: 100%; max-width: 360px;
+    position: relative; z-index: 1;
+  }
+  .lock-notif {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 0;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 12px;
+    animation: notifSlide 0.4s ease forwards;
+  }
+  @keyframes notifSlide {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .notif-icon { font-size: 20px; }
+  .notif-text { flex: 1; }
+  .notif-title { font-size: 12px; font-weight: 600; }
+  .notif-body { font-size: 11px; color: rgba(255,255,255,0.65); }
+  .notif-time { font-size: 10px; color: rgba(255,255,255,0.4); }
+
+  .lock-swipe-hint {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.4);
+    position: relative; z-index: 1;
+    animation: swipeHint 2s ease-in-out infinite;
+  }
+  @keyframes swipeHint {
+    0%,100% { opacity: 0.4; transform: translateY(0); }
+    50% { opacity: 0.9; transform: translateY(-4px); }
+  }
+
+  /* ═══════════════════════════════════════════
+     STATUS BAR
+  ═══════════════════════════════════════════ */
+  #status-bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 28px;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    z-index: 9000;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .status-left { display: flex; align-items: center; gap: 8px; }
+  .status-right { display: flex; align-items: center; gap: 8px; }
+  .status-time-bar { font-size: 11px; font-weight: 300; letter-spacing: 0.5px; }
+
+  .battery-bar {
+    width: 16px; height: 8px;
+    border: 1.5px solid rgba(255,255,255,0.9);
+    border-radius: 0;
+    position: relative;
+    display: flex; align-items: center;
+    padding: 1px;
+  }
+  .battery-bar::after {
+    content: '';
+    position: absolute; right: -4px; top: 50%;
+    transform: translateY(-50%);
+    width: 2px; height: 4px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 0 1px 1px 0;
+  }
+  .battery-fill {
+    height: 100%;
+    background: #fff;
+    border-radius: 0;
+    width: 75%;
+    transition: width 0.5s;
+  }
+
+  .signal-bars {
+    display: flex; align-items: flex-end; gap: 1.5px; height: 12px;
+  }
+  .signal-bar {
+    width: 3px; background: rgba(255,255,255,0.4); border-radius: 0;
+  }
+  .signal-bar.active { background: #fff; }
+  .signal-bar:nth-child(1) { height: 3px; }
+  .signal-bar:nth-child(2) { height: 5px; }
+  .signal-bar:nth-child(3) { height: 7px; }
+  .signal-bar:nth-child(4) { height: 9px; }
+  .signal-bar:nth-child(5) { height: 12px; }
+
+  /* ═══════════════════════════════════════════
+     HOME SCREEN - TILES
+  ═══════════════════════════════════════════ */
+  #home-screen {
+    position: fixed; inset: 0;
+    background: #000;
+    padding-top: 36px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: none;
+  }
+  #home-screen.active { display: block; }
+
+  .home-bg {
+    position: fixed; inset: 28px 0 0 0;
+    background:
+      radial-gradient(ellipse at 10% 20%, rgba(0,120,212,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 80%, rgba(0,180,216,0.08) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .tiles-header {
+    padding: 24px 18px 10px;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.35);
+    font-weight: 600;
+    position: relative; z-index: 1;
+  }
+
+  .tiles-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    padding: 4px 18px 20px;
+    position: relative; z-index: 1;
+  }
+
+  .tile {
+    background: var(--tile-color, #0078d4);
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 8px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: filter 0.15s, transform 0.12s;
+    aspect-ratio: 1;
+  }
+  .tile:active { filter: brightness(1.3); transform: scale(0.96); }
+
+  .tile.wide {
+    grid-column: span 2;
+    aspect-ratio: 2/1;
+  }
+  .tile.tall {
+    grid-row: span 2;
+    aspect-ratio: 1/2;
+  }
+  .tile.big {
+    grid-column: span 2;
+    grid-row: span 2;
+    aspect-ratio: 1;
+  }
+
+  .tile::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .tile-svg-icon {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -60%);
+    width: 44px; height: 44px;
+    color: rgba(255,255,255,0.92);
+  }
+  .tile-svg-icon svg { width: 100%; height: 100%; }
+  .tile-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: rgba(255,255,255,0.9);
+    line-height: 1.2;
+    position: relative; z-index: 1;
+  }
+  .tile-count {
+    position: absolute;
+    top: 6px; right: 6px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 0;
+    width: 20px; height: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Live tile animations */
+  .tile-live-bg {
+    position: absolute; inset: 0;
+    overflow: hidden;
+  }
+  .tile-live-content {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: flex-start; justify-content: flex-end;
+    padding: 8px;
+  }
+
+  /* Ripple on tap */
+  .ripple {
+    position: absolute;
+    border-radius: 0;
+    width: 80px; height: 80px;
+    background: rgba(255,255,255,0.25);
+    transform: scale(0);
+    animation: rippleAnim 0.4s linear;
+    pointer-events: none;
+  }
+  @keyframes rippleAnim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* ═══════════════════════════════════════════
+     APP SCREENS (FULLSCREEN)
+  ═══════════════════════════════════════════ */
+  .app-screen {
+    position: fixed; inset: 0;
+    z-index: 150;
+    background: #000;
+    display: none;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    padding-bottom: 42px;
+  }
+  .app-screen.open {
+    display: flex;
+    transform: translateX(0);
+  }
+  .app-screen.closing {
+    transform: translateX(100%);
+  }
+
+  .app-header {
+    height: 60px;
+    display: flex; align-items: center;
+    padding: 0 16px;
+    background: var(--app-color, #0078d4);
+    flex-shrink: 0;
+  }
+  .app-header-title {
+    font-size: 20px;
+    font-weight: 300;
+    letter-spacing: 1px;
+    flex: 1;
+  }
+  .app-back {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    margin-right: 8px;
+    border-radius: 0;
+    transition: background 0.15s;
+  }
+  .app-back:hover { background: rgba(255,255,255,0.15); }
+  .app-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* ═══════════════════════════════════════════
+     SETTINGS APP
+  ═══════════════════════════════════════════ */
+  #app-settings { --app-color: #1f1f1f; background: #1a1a1a; }
+
+  .settings-section {
+    padding: 20px 16px 8px;
+  }
+  .settings-section-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .settings-item {
+    display: flex; align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    cursor: pointer;
+    transition: background 0.1s;
+    gap: 14px;
+  }
+  .settings-item:hover { background: rgba(255,255,255,0.04); margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+  .settings-item-icon { font-size: 22px; width: 30px; text-align: center; }
+  .settings-item-label {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 300;
+  }
+  .settings-item-value {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+  }
+
+  /* Toggle switch */
+  .toggle {
+    width: 44px; height: 24px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 0;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    left: 3px; top: 3px;
+    width: 18px; height: 18px;
+    background: #fff;
+    border-radius: 0;
+    transition: transform 0.2s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .toggle.on::after { transform: translateX(20px); }
+
+  /* Slider */
+  .settings-slider {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 0;
+    outline: none;
+    margin: 8px 0;
+  }
+  .settings-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 0;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(0,120,212,0.3);
+  }
+
+  /* ═══════════════════════════════════════════
+     TASK MANAGER APP
+  ═══════════════════════════════════════════ */
+  #app-tasks { --app-color: #c0392b; background: #0d0d0d; }
+
+  .task-header-info {
+    padding: 16px;
+    background: #1a1a1a;
+    border-bottom: 1px solid rgba(255,0,0,0.1);
+  }
+  .task-cpu-bar-wrap {
+    display: flex; align-items: center; gap: 10px; margin: 6px 0;
+  }
+  .task-cpu-label { font-size: 11px; color: rgba(255,255,255,0.5); width: 50px; }
+  .task-cpu-bar {
+    flex: 1; height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 0; overflow: hidden;
+  }
+  .task-cpu-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #c0392b, #e74c3c);
+    border-radius: 0;
+    transition: width 0.5s ease;
+  }
+  .task-cpu-pct { font-size: 11px; color: #e74c3c; width: 35px; text-align: right; }
+
+  .task-list { padding: 8px 0; }
+  .task-item {
+    display: flex; align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .task-item:hover { background: rgba(255,255,255,0.04); }
+  .task-item-icon { font-size: 24px; }
+  .task-item-info { flex: 1; }
+  .task-item-name { font-size: 14px; font-weight: 300; }
+  .task-item-pid { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+  .task-item-cpu {
+    font-size: 11px; color: #e74c3c; text-align: right;
+  }
+  .task-item-mem {
+    font-size: 10px; color: rgba(255,255,255,0.4); text-align: right; margin-top: 2px;
+  }
+  .task-kill-btn {
+    width: 28px; height: 28px;
+    border: 1px solid rgba(255,50,50,0.4);
+    border-radius: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    color: rgba(255,100,100,0.7);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .task-kill-btn:hover { background: rgba(255,50,50,0.2); color: #ff6b6b; }
+
+  /* ═══════════════════════════════════════════
+     FILE MANAGER APP
+  ═══════════════════════════════════════════ */
+  #app-files { --app-color: #2980b9; background: #111; }
+
+  .files-path {
+    padding: 8px 16px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    background: #1a1a1a;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    letter-spacing: 0.5px;
+  }
+  .files-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    padding: 8px;
+  }
+  .file-item {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 12px 4px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 0.1s;
+    gap: 6px;
+  }
+  .file-item:hover { background: rgba(255,255,255,0.06); }
+  .file-item:active { background: rgba(0,120,212,0.2); }
+  .file-icon { font-size: 28px; }
+  .file-name {
+    font-size: 10px;
+    color: rgba(255,255,255,0.7);
+    text-align: center;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ═══════════════════════════════════════════
+     TERMINAL APP
+  ═══════════════════════════════════════════ */
+  #app-terminal { --app-color: #1a1a1a; background: #0a0a0a; }
+
+  .terminal-body {
+    padding: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    height: calc(100vh - 84px);
+    display: flex; flex-direction: column;
+  }
+  .terminal-output {
+    flex: 1;
+    overflow-y: auto;
+    line-height: 1.6;
+    color: #33ff00;
+  }
+  .terminal-line { margin-bottom: 1px; }
+  .terminal-line.err { color: #ff4444; }
+  .terminal-line.info { color: #00aaff; }
+  .terminal-line.warn { color: #ffaa00; }
+  .terminal-line.sys { color: rgba(255,255,255,0.4); }
+  .terminal-prompt { color: #aaa; }
+  .terminal-input-line {
+    display: flex; align-items: center;
+    margin-top: 8px; gap: 4px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 8px;
+  }
+  .terminal-prompt-sign { color: #33ff00; }
+  .terminal-input {
+    flex: 1;
+    background: none; border: none; outline: none;
+    color: #33ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    caret-color: #33ff00;
+  }
+
+  /* ═══════════════════════════════════════════
+     SYSTEM CONTROL CENTER
+  ═══════════════════════════════════════════ */
+  #app-control { --app-color: #6c3483; background: #0d0d1a; }
+
+  .control-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 16px;
+  }
+  .control-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 0;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .control-card:hover { background: rgba(108,52,131,0.3); border-color: rgba(108,52,131,0.5); }
+  .control-card.danger { border-color: rgba(192,57,43,0.3); }
+  .control-card.danger:hover { background: rgba(192,57,43,0.2); border-color: #c0392b; }
+  .control-card-icon { font-size: 28px; margin-bottom: 8px; }
+  .control-card-title { font-size: 14px; font-weight: 400; }
+  .control-card-desc { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 3px; }
+
+  .control-separator {
+    padding: 12px 16px 6px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(108,52,131,0.8);
+    font-weight: 600;
+  }
+
+  /* ═══════════════════════════════════════════
+     ABOUT APP
+  ═══════════════════════════════════════════ */
+  #app-about { --app-color: #1a6b3a; background: #0a0a0a; }
+  .about-content {
+    padding: 30px 20px;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 20px;
+  }
+  .about-logo {
+    font-size: 52px;
+    font-weight: 100;
+    letter-spacing: 10px;
+    background: linear-gradient(135deg, #0078d4, #00b4d8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .about-logo span { -webkit-text-fill-color: rgba(255,255,255,0.2); }
+  .about-version {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 1px;
+  }
+  .about-specs {
+    width: 100%;
+    background: #111;
+    border-radius: 0;
+    overflow: hidden;
+  }
+  .about-spec {
+    display: flex; align-items: center;
+    padding: 13px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    gap: 12px;
+  }
+  .about-spec:last-child { border-bottom: none; }
+  .about-spec-label { font-size: 12px; color: rgba(255,255,255,0.45); flex: 1; }
+  .about-spec-value { font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  .about-bar-wrap { margin-top: 8px; width: 100%; }
+  .about-bar {
+    width: 100%; height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 0; overflow: hidden; margin-bottom: 10px;
+  }
+  .about-bar-fill {
+    height: 100%;
+    border-radius: 0;
+    animation: barLoad 1.5s ease forwards;
+    transform-origin: left;
+    transform: scaleX(0);
+  }
+  @keyframes barLoad {
+    to { transform: scaleX(1); }
+  }
+
+  /* ═══════════════════════════════════════════
+     NOTIFICATION PANEL (SWIPE DOWN)
+  ═══════════════════════════════════════════ */
+  #notif-panel {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+    background: rgba(10,10,20,0.97);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    transform: translateY(-100%);
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    padding-top: 28px;
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+  #notif-panel.open { transform: translateY(0); }
+
+  .notif-panel-header {
+    padding: 16px 16px 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .notif-panel-title {
+    font-size: 11px; letter-spacing: 3px;
+    color: rgba(255,255,255,0.45);
+  }
+  .notif-clear-btn {
+    font-size: 10px; color: var(--accent);
+    cursor: pointer; letter-spacing: 1px;
+  }
+
+  .quick-toggles {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 8px; padding: 8px 16px 16px;
+  }
+  .quick-toggle {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 4px;
+    padding: 10px 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 0;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .quick-toggle.on { background: var(--accent); }
+  .quick-toggle-icon { font-size: 18px; }
+  .quick-toggle-label { font-size: 9px; color: rgba(255,255,255,0.6); letter-spacing: 0.5px; }
+  .quick-toggle.on .quick-toggle-label { color: #fff; }
+
+  .notif-items { padding: 0 8px 16px; }
+  .notif-item {
+    display: flex; gap: 12px;
+    padding: 12px;
+    border-radius: 0;
+    margin-bottom: 4px;
+    background: rgba(255,255,255,0.04);
+    border-left: 3px solid var(--accent);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .notif-item:hover { background: rgba(255,255,255,0.08); }
+  .notif-item-icon { font-size: 22px; }
+  .notif-item-body { flex: 1; }
+  .notif-item-title { font-size: 13px; font-weight: 400; }
+  .notif-item-msg { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+  .notif-item-time { font-size: 10px; color: rgba(255,255,255,0.3); }
+
+  /* ═══════════════════════════════════════════
+     NAVIGATION BAR
+  ═══════════════════════════════════════════ */
+  #nav-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 42px;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: none;
+    align-items: center; justify-content: space-around;
+    z-index: 200;
+  }
+  #nav-bar.visible { display: flex; }
+
+  .nav-btn {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 0.12s;
+    color: rgba(255,255,255,0.85);
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.12); }
+  .nav-btn:active { background: rgba(255,255,255,0.22); color: #fff; }
+
+  /* SEARCH SCREEN - slides from left like Win 8.1 */
+  #search-screen {
+    position: fixed; inset: 0;
+    z-index: 160;
+    background: #000;
+    display: none;
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.0, 0.0, 0.2, 1);
+    padding-top: 28px;
+  }
+  #search-screen.open {
+    display: flex;
+    transform: translateX(0);
+  }
+  #search-header {
+    display: flex; align-items: center; gap: 0;
+    padding: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    background: #111;
+  }
+  #search-back {
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: rgba(255,255,255,0.7);
+    flex-shrink: 0;
+    border-radius: 0;
+    transition: background 0.12s;
+    border-right: 1px solid rgba(255,255,255,0.07);
+  }
+  #search-back:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  #search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 14px 16px;
+    color: #fff;
+    font-size: 16px;
+    font-family: var(--font);
+    font-weight: 300;
+    outline: none;
+    letter-spacing: 0.5px;
+  }
+  #search-input::placeholder { color: rgba(255,255,255,0.25); }
+
+  #search-results {
+    flex: 1; overflow-y: auto;
+    padding: 8px 0;
+  }
+  .search-result-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .search-result-item:hover { background: rgba(255,255,255,0.05); }
+  .search-result-item:active { background: rgba(0,120,212,0.2); }
+  .search-result-icon {
+    width: 48px; height: 48px;
+    border-radius: 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .search-result-icon svg { width: 26px; height: 26px; }
+  .search-result-name { font-size: 16px; font-weight: 300; }
+  .search-result-desc { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+  .search-empty {
+    text-align: center; padding: 60px 20px;
+    color: rgba(255,255,255,0.25); font-size: 14px; letter-spacing: 1px;
+  }
+
+  /* ═══════════════════════════════════════════
+     COLLAPSE / MODAL DIALOGS
+  ═══════════════════════════════════════════ */
+  #modal-overlay {
+    position: fixed; inset: 0; z-index: 800;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center;
+  }
+  #modal-overlay.open { display: flex; }
+
+  .modal {
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0;
+    width: 80%; max-width: 320px;
+    overflow: hidden;
+    animation: modalIn 0.25s cubic-bezier(0.4,0,0.2,1) forwards;
+  }
+  @keyframes modalIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .modal-header {
+    padding: 14px 16px;
+    background: var(--modal-color, #c0392b);
+    font-size: 15px; font-weight: 300;
+    letter-spacing: 1px;
+  }
+  .modal-body {
+    padding: 16px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.6;
+  }
+  .modal-actions {
+    display: flex;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .modal-btn {
+    flex: 1; padding: 13px;
+    text-align: center; cursor: pointer;
+    font-size: 13px; letter-spacing: 1px;
+    transition: background 0.15s;
+    border: none; background: none; color: #fff;
+  }
+  .modal-btn:hover { background: rgba(255,255,255,0.08); }
+  .modal-btn.confirm { color: #e74c3c; font-weight: 600; }
+  .modal-btn + .modal-btn { border-left: 1px solid rgba(255,255,255,0.08); }
+
+  /* ═══════════════════════════════════════════
+     TOAST NOTIFICATIONS
+  ═══════════════════════════════════════════ */
+  #toast-container {
+    position: fixed; bottom: 70px; left: 16px; right: 16px;
+    z-index: 700;
+    display: flex; flex-direction: column; gap: 6px;
+    pointer-events: none;
+  }
+  .toast {
+    background: rgba(30,30,40,0.97);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-left: 3px solid var(--accent);
+    border-radius: 0;
+    padding: 10px 14px;
+    font-size: 12px;
+    animation: toastIn 0.3s ease forwards;
+    pointer-events: all;
+  }
+  @keyframes toastIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .toast.out {
+    animation: toastOut 0.3s ease forwards;
+  }
+  @keyframes toastOut {
+    to { transform: translateY(20px); opacity: 0; }
+  }
+
+  /* ═══════════════════════════════════════════
+     SCROLLBAR STYLE
+  ═══════════════════════════════════════════ */
+  ::-webkit-scrollbar { width: 2px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,120,212,0.4); border-radius: 0; }
+
+  /* ═══════════════════════════════════════════
+     APP LIST (ALL APPS)
+  ═══════════════════════════════════════════ */
+  #app-list-screen {
+    position: fixed; inset: 0;
+    z-index: 150;
+    background: #000;
+    padding-top: 28px;
+    display: none;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  #app-list-screen.open {
+    display: block;
+    transform: translateX(0);
+  }
+
+  .app-list-header {
+    padding: 20px 16px 8px;
+    font-size: 11px; letter-spacing: 3px;
+    color: rgba(255,255,255,0.3); font-weight: 600;
+  }
+  .app-list-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.1s;
+  }
+  .app-list-item:hover { background: rgba(255,255,255,0.05); }
+  .app-list-icon {
+    width: 44px; height: 44px;
+    border-radius: 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: rgba(255,255,255,0.9);
+    padding: 9px;
+  }
+  .app-list-icon svg { width: 100%; height: 100%; }
+  .app-list-name { font-size: 15px; font-weight: 300; }
+  .app-list-desc { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 1px; }
+
+  /* Phosphor-style icons via emoji fallbacks */
+  .icon-wifi::before { content: '📶'; }
+
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     BOOT SCREEN
+════════════════════════════════════════ -->
+<div id="boot-screen">
+  <div class="boot-logo">
+    <img src="https://www.vyopta.com/wp-content/uploads/2019/08/Microsoft-Logo-White.png" alt="Microsoft">
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     LOCK SCREEN
+════════════════════════════════════════ -->
+<div id="lock-screen">
+  <div class="lock-wallpaper"></div>
+  <div class="lock-center-logo">
+    <img src="https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/8355c42b-bec4-426e-a0fa-f39523ea6c02/da7v7y8-52d76d93-ab94-4015-903a-7b9be668b252.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi84MzU1YzQyYi1iZWM0LTQyNmUtYTBmYS1mMzk1MjNlYTZjMDIvZGE3djd5OC01MmQ3NmQ5My1hYjk0LTQwMTUtOTAzYS03YjliZTY2OGIyNTIucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.j5Z8eRxUX79o0NB7aJDiyNcHl2HB0QtsABu4jJbyYDo" alt="LXR">
+  </div>
+  <div class="lock-time-block">
+    <div class="lock-time" id="lock-time">00:00</div>
+    <div class="lock-date" id="lock-date">الاثنين، ١ يناير</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     STATUS BAR
+════════════════════════════════════════ -->
+<div id="status-bar" style="display:none">
+  <div class="status-left">
+    <span class="status-time-bar" id="status-time">00:00</span>
+  </div>
+  <div class="status-right">
+    <div class="battery-bar">
+      <div class="battery-fill" id="battery-fill"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     HOME SCREEN
+════════════════════════════════════════ -->
+<div id="home-screen">
+  <div class="tiles-grid" id="tiles-grid"></div>
+  <div style="height:70px"></div>
+</div>
+
+<!-- ════════════════════════════════════════
+     APP SCREENS
+════════════════════════════════════════ -->
+
+<!-- SETTINGS -->
+<div class="app-screen" id="app-settings">
+  <div class="app-content">
+
+    <div class="settings-section">
+      <div class="settings-section-title">النظام</div>
+      <div class="settings-item" onclick="toggleSetting(this)">
+        <div class="settings-item-icon">🌙</div>
+        <div class="settings-item-label">الوضع الليلي</div>
+        <div class="toggle on" id="toggle-dark"></div>
+      </div>
+      <div class="settings-item" onclick="toggleSetting(this)">
+        <div class="settings-item-icon">✈️</div>
+        <div class="settings-item-label">وضع الطيران</div>
+        <div class="toggle" id="toggle-airplane"></div>
+      </div>
+      <div class="settings-item" onclick="toggleSetting(this)">
+        <div class="settings-item-icon">🔔</div>
+        <div class="settings-item-label">الإشعارات</div>
+        <div class="toggle on" id="toggle-notifs"></div>
+      </div>
+      <div class="settings-item" onclick="toggleSetting(this)">
+        <div class="settings-item-icon">🛡️</div>
+        <div class="settings-item-label">جدار الحماية</div>
+        <div class="toggle on" id="toggle-firewall"></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">الأداء</div>
+      <div class="settings-item">
+        <div class="settings-item-icon">⚡</div>
+        <div class="settings-item-label">سطوع الشاشة</div>
+      </div>
+      <div style="padding: 0 16px 10px">
+        <input type="range" class="settings-slider" min="10" max="100" value="80" id="slider-brightness"
+          oninput="showToast('السطوع: ' + this.value + '%')">
+      </div>
+
+      <div class="settings-item">
+        <div class="settings-item-icon">🔊</div>
+        <div class="settings-item-label">مستوى الصوت</div>
+      </div>
+      <div style="padding: 0 16px 10px">
+        <input type="range" class="settings-slider" min="0" max="100" value="60" id="slider-volume"
+          oninput="showToast('الصوت: ' + this.value + '%')">
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">الشبكة</div>
+      <div class="settings-item" onclick="toggleSetting(this)">
+        <div class="settings-item-icon">📶</div>
+        <div class="settings-item-label">Wi-Fi</div>
+        <div class="settings-item-value">LXR-NET-5G</div>
+        <div class="toggle on" id="toggle-wifi"></div>
+      </div>
+      <div class="settings-item" onclick="toggleSetting(this)">
+        <div class="settings-item-icon">📡</div>
+        <div class="settings-item-label">البلوتوث</div>
+        <div class="toggle" id="toggle-bt"></div>
+      </div>
+      <div class="settings-item" onclick="toggleSetting(this)">
+        <div class="settings-item-icon">🌐</div>
+        <div class="settings-item-label">بيانات الشبكة</div>
+        <div class="toggle on" id="toggle-data"></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">الأمان</div>
+      <div class="settings-item" onclick="showToast('تم تغيير قفل الشاشة')">
+        <div class="settings-item-icon">🔐</div>
+        <div class="settings-item-label">قفل الشاشة</div>
+        <div class="settings-item-value">رمز PIN</div>
+        <div style="color:rgba(255,255,255,0.3);font-size:18px">›</div>
+      </div>
+      <div class="settings-item" onclick="toggleSetting(this)">
+        <div class="settings-item-icon">🧬</div>
+        <div class="settings-item-label">بصمة الإصبع</div>
+        <div class="toggle" id="toggle-fp"></div>
+      </div>
+      <div class="settings-item" onclick="showToast('جارٍ تحديث قاعدة بيانات الفيروسات...')">
+        <div class="settings-item-icon">🔍</div>
+        <div class="settings-item-label">مكافحة الفيروسات</div>
+        <div class="settings-item-value" style="color:#4ade80">محدّث</div>
+        <div style="color:rgba(255,255,255,0.3);font-size:18px">›</div>
+      </div>
+    </div>
+
+    <div style="height:70px"></div>
+  </div>
+</div>
+
+<!-- TASK MANAGER -->
+<!-- FILE MANAGER -->
+<div class="app-screen" id="app-files">
+  <div class="app-content">
+    <div class="files-path" id="files-path">/ النظام / الجذر</div>
+    <div class="files-grid" id="files-grid">
+      <!-- Rendered by JS -->
+    </div>
+    <div style="height:70px"></div>
+  </div>
+</div>
+
+<!-- TERMINAL -->
+<div class="app-screen" id="app-terminal">
+  <div class="app-content" style="background:#0a0a0a">
+    <div class="terminal-body">
+      <div class="terminal-output" id="terminal-output">
+        <div class="terminal-line sys">LXR OS Kernel v2.4.1 — محاكي الطرفية</div>
+        <div class="terminal-line sys">اكتب 'help' لقائمة الأوامر المتاحة</div>
+        <div class="terminal-line sys">─────────────────────────────────────</div>
+      </div>
+      <div class="terminal-input-line">
+        <span class="terminal-prompt-sign">lxr@system:~$&nbsp;</span>
+        <input type="text" class="terminal-input" id="terminal-input"
+          placeholder="أدخل أمراً..." autocomplete="off" spellcheck="false"
+          onkeydown="handleTerminalInput(event)">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PHONE -->
+<div class="app-screen" id="app-phone">
+  <div class="app-content" style="background:#107c10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px">
+    <div style="font-size:80px;opacity:0.15;position:absolute;top:50%;left:50%;transform:translate(-50%,-60%)">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.45 5.45l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    </div>
+    <div style="font-size:64px;font-weight:100;letter-spacing:4px;color:#fff;position:relative;z-index:1" id="phone-number">+966 5X XXX XXXX</div>
+    <div style="color:rgba(255,255,255,0.6);font-size:13px;letter-spacing:2px">اتصال...</div>
+    <div style="display:grid;grid-template-columns:repeat(3,72px);gap:12px;margin-top:40px">
+      ${[1,2,3,4,5,6,7,8,9,'*',0,'#'].map(n=>`<div onclick="appendPhone('${n}')" style="width:72px;height:72px;border:1px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:300;cursor:pointer;color:#fff;transition:background .1s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">${n}</div>`).join('')}
+    </div>
+  </div>
+</div>
+
+<!-- MAIL -->
+<div class="app-screen" id="app-mail">
+  <div class="app-content" style="background:#001a33">
+    <div style="padding:16px;border-bottom:1px solid rgba(255,255,255,0.07);font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.3)">صندوق الوارد</div>
+    ${[
+      {from:'فريق Microsoft',subj:'مرحباً بك في Windows 10 Mobile',time:'الآن',read:false},
+      {from:'OneDrive',subj:'تم مزامنة ملفاتك بنجاح',time:'٢ د',read:false},
+      {from:'Outlook',subj:'لديك ٣ اجتماعات اليوم',time:'١٥ د',read:true},
+      {from:'Windows Update',subj:'تحديثات جديدة متاحة',time:'١ س',read:true},
+      {from:'Cortana',subj:'تذكير: اجتماع الساعة ٣',time:'٢ س',read:true},
+    ].map(m=>`
+      <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;gap:12px;cursor:pointer;background:${m.read?'transparent':'rgba(0,120,212,0.08)'}">
+        <div style="width:8px;height:8px;background:${m.read?'transparent':'#0078d4'};margin-top:5px;flex-shrink:0"></div>
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between">
+            <div style="font-size:13px;font-weight:${m.read?'300':'400'}">${m.from}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.35)">${m.time}</div>
+          </div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">${m.subj}</div>
+        </div>
+      </div>
+    `).join('')}
+  </div>
+</div>
+
+<!-- EDGE -->
+<div class="app-screen" id="app-edge">
+  <div class="app-content" style="background:#001a33;display:flex;flex-direction:column">
+    <div style="padding:8px;background:#0d0d1a;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:8px;align-items:center">
+      <div style="flex:1;background:rgba(255,255,255,0.06);padding:8px 12px;font-size:12px;color:rgba(255,255,255,0.4)">www.bing.com</div>
+    </div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;opacity:0.4">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <div style="font-size:13px;color:rgba(255,255,255,0.4);letter-spacing:1px">Microsoft Edge</div>
+    </div>
+  </div>
+</div>
+
+<!-- CAMERA -->
+<div class="app-screen" id="app-camera">
+  <div class="app-content" style="background:#000;display:flex;align-items:center;justify-content:center">
+    <div style="text-align:center;opacity:0.3">
+      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:12px;letter-spacing:2px">الكاميرا</div>
+    </div>
+    <div style="position:absolute;bottom:70px;right:20px;width:64px;height:64px;border:2px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="showToast('تم التقاط الصورة')">
+      <div style="width:48px;height:48px;background:rgba(255,255,255,0.15)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MUSIC -->
+<div class="app-screen" id="app-music">
+  <div class="app-content" style="background:#1a0005">
+    <div style="padding:30px 20px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.07)">
+      <div style="width:140px;height:140px;background:rgba(232,17,35,0.2);border:1px solid rgba(232,17,35,0.4);margin:0 auto;display:flex;align-items:center;justify-content:center">
+        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="rgba(232,17,35,0.8)" stroke-width="1"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <div style="margin-top:16px;font-size:16px;font-weight:300">لا يوجد تشغيل حالي</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px">اختر أغنية للبدء</div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:32px;padding:24px;align-items:center">
+      ${['⏮','⏸','⏭'].map(i=>`<div style="font-size:28px;cursor:pointer;opacity:0.6" onclick="showToast('${i}')">${i}</div>`).join('')}
+    </div>
+  </div>
+</div>
+
+<!-- PEOPLE -->
+<div class="app-screen" id="app-people">
+  <div class="app-content" style="background:#00140f">
+    <div style="padding:16px;border-bottom:1px solid rgba(255,255,255,0.07);font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.3)">جهات الاتصال</div>
+    ${['أحمد محمد','سارة علي','خالد العمري','نورة الشمري','فهد القحطاني','منى الزهراني'].map((n,i)=>`
+      <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;gap:12px;align-items:center;cursor:pointer">
+        <div style="width:40px;height:40px;background:${['#0078d4','#107c10','#e81123','#00b294','#6c3483','#d83b01'][i]};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:300;flex-shrink:0">${n[0]}</div>
+        <div style="font-size:14px;font-weight:300">${n}</div>
+      </div>
+    `).join('')}
+  </div>
+</div>
+
+<!-- MAPS -->
+<div class="app-screen" id="app-maps">
+  <div class="app-content" style="background:#0d1117;display:flex;align-items:center;justify-content:center">
+    <div style="text-align:center;opacity:0.3">
+      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:12px;letter-spacing:2px">الخرائط</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.2);margin-top:6px">الدمام، المنطقة الشرقية</div>
+    </div>
+  </div>
+</div>
+
+<!-- CALENDAR -->
+<div class="app-screen" id="app-calendar">
+  <div class="app-content" style="background:#001a33">
+    <div style="padding:16px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.07)">
+      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,0.4)">مارس ٢٠٢٦</div>
+      <div style="font-size:48px;font-weight:100;color:#0078d4;line-height:1.1">١٠</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5)">الثلاثاء</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;padding:12px 8px">
+      ${['ح','ن','ث','ر','خ','ج','س'].map(d=>`<div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.3);padding:4px">${d}</div>`).join('')}
+      ${Array.from({length:31},(_, i)=>`<div style="text-align:center;font-size:12px;padding:6px;cursor:pointer;${i+1===10?'background:#0078d4;':''}color:${i+1===10?'#fff':'rgba(255,255,255,0.6)'}">${i+1}</div>`).join('')}
+    </div>
+  </div>
+</div>
+
+<!-- STORE -->
+<div class="app-screen" id="app-store">
+  <div class="app-content" style="background:#0d0d0d">
+    <div style="padding:16px;border-bottom:1px solid rgba(255,255,255,0.07);font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.3)">المتجر</div>
+    ${[
+      {name:'WhatsApp',cat:'تواصل اجتماعي',color:'#25d366'},
+      {name:'Netflix',cat:'ترفيه',color:'#e50914'},
+      {name:'Spotify',cat:'موسيقى',color:'#1db954'},
+      {name:'Twitter / X',cat:'تواصل اجتماعي',color:'#000'},
+      {name:'Instagram',cat:'صور وفيديو',color:'#833ab4'},
+    ].map(a=>`
+      <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;gap:12px;align-items:center;cursor:pointer" onclick="showToast('جارٍ تنزيل ${a.name}...')">
+        <div style="width:48px;height:48px;background:${a.color};flex-shrink:0"></div>
+        <div>
+          <div style="font-size:14px;font-weight:300">${a.name}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">${a.cat}</div>
+        </div>
+        <div style="margin-right:auto;font-size:11px;color:#0078d4;letter-spacing:1px">تنزيل</div>
+      </div>
+    `).join('')}
+  </div>
+</div>
+
+<!-- CLOCK -->
+<div class="app-screen" id="app-clock">
+  <div class="app-content" style="background:#000d1a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+    <div style="font-size:80px;font-weight:100;letter-spacing:2px" id="clock-display">00:00</div>
+    <div style="font-size:14px;color:rgba(255,255,255,0.4);letter-spacing:3px" id="clock-seconds">00</div>
+    <div style="margin-top:32px;display:flex;gap:16px">
+      <div style="padding:12px 24px;border:1px solid rgba(255,255,255,0.15);font-size:13px;cursor:pointer;letter-spacing:1px" onclick="showToast('تم ضبط المنبه')">منبه</div>
+      <div style="padding:12px 24px;border:1px solid rgba(255,255,255,0.15);font-size:13px;cursor:pointer;letter-spacing:1px" onclick="showToast('بدأ المؤقت')">مؤقت</div>
+    </div>
+  </div>
+</div>
+
+<!-- CALCULATOR -->
+<div class="app-screen" id="app-calc">
+  <div class="app-content" style="background:#1a1a1a;display:flex;flex-direction:column">
+    <div style="padding:16px 20px;text-align:left;flex:1;display:flex;align-items:flex-end">
+      <div style="font-size:48px;font-weight:100;letter-spacing:1px;width:100%;text-align:right" id="calc-display">0</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,0.05)">
+      ${[['C','±','%','÷'],['7','8','9','×'],['4','5','6','−'],['1','2','3','+'],[' ','0','.','=']].map(row=>
+        row.map(k=>`<div onclick="calcPress('${k}')" style="padding:18px;text-align:center;font-size:20px;font-weight:300;cursor:pointer;background:${['÷','×','−','+','='].includes(k)?'#004e8c':k==='C'?'#2c2c2c':'#1a1a1a'};transition:background .1s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">${k}</div>`).join('')
+      ).join('')}
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     NOTIFICATION PANEL
+════════════════════════════════════════ -->
+<div id="notif-panel">
+  <div class="notif-panel-header">
+    <div class="notif-panel-title">لوحة الإشعارات</div>
+    <div class="notif-clear-btn" onclick="clearNotifs()">مسح الكل</div>
+  </div>
+
+  <div class="quick-toggles" id="quick-toggles">
+    <div class="quick-toggle on" onclick="this.classList.toggle('on')">
+      <div class="quick-toggle-icon">📶</div>
+      <div class="quick-toggle-label">Wi-Fi</div>
+    </div>
+    <div class="quick-toggle on" onclick="this.classList.toggle('on')">
+      <div class="quick-toggle-icon">📡</div>
+      <div class="quick-toggle-label">بيانات</div>
+    </div>
+    <div class="quick-toggle" onclick="this.classList.toggle('on')">
+      <div class="quick-toggle-icon">🔵</div>
+      <div class="quick-toggle-label">BT</div>
+    </div>
+    <div class="quick-toggle" onclick="this.classList.toggle('on')">
+      <div class="quick-toggle-icon">✈️</div>
+      <div class="quick-toggle-label">طيران</div>
+    </div>
+    <div class="quick-toggle on" onclick="this.classList.toggle('on')">
+      <div class="quick-toggle-icon">🌙</div>
+      <div class="quick-toggle-label">ليلي</div>
+    </div>
+  </div>
+
+  <div class="notif-items" id="notif-items">
+    <!-- Rendered by JS -->
+  </div>
+</div>
+
+<!-- APP LIST -->
+<div id="app-list-screen">
+  <div class="app-list-header">جميع التطبيقات</div>
+  <div id="app-list-items"></div>
+  <div style="height:70px"></div>
+</div>
+
+<!-- NAVIGATION BAR -->
+<div id="nav-bar" dir="ltr">
+  <div class="nav-btn" onclick="goBack()" title="رجوع">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <line x1="20" y1="12" x2="4" y2="12"></line>
+      <polyline points="10 18 4 12 10 6"></polyline>
+    </svg>
+  </div>
+  <div class="nav-btn" onclick="goHome()" title="الرئيسية">
+    <img src="https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/8355c42b-bec4-426e-a0fa-f39523ea6c02/da7v7y8-52d76d93-ab94-4015-903a-7b9be668b252.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi84MzU1YzQyYi1iZWM0LTQyNmUtYTBmYS1mMzk1MjNlYTZjMDIvZGE3djd5OC01MmQ3NmQ5My1hYjk0LTQwMTUtOTAzYS03YjliZTY2OGIyNTIucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.j5Z8eRxUX79o0NB7aJDiyNcHl2HB0QtsABu4jJbyYDo" style="width:20px;height:20px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85">
+  </div>
+  <div class="nav-btn" onclick="openSearch()" title="بحث">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+  </div>
+</div>
+
+<!-- SEARCH SCREEN -->
+<div id="search-screen">
+  <div id="search-header">
+    <div id="search-back" onclick="closeSearch()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </div>
+    <input id="search-input" type="text" placeholder="ابحث عن تطبيق..." autocomplete="off" oninput="doSearch(this.value)">
+  </div>
+  <div id="search-results"></div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header" id="modal-title">تأكيد</div>
+    <div class="modal-body" id="modal-body">هل أنت متأكد؟</div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeModal()">إلغاء</button>
+      <button class="modal-btn confirm" id="modal-confirm-btn" onclick="confirmModal()">تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const state = {
+  battery: 75,
+  cpuUsage: 34,
+  ramUsage: 52,
+  diskUsage: 18,
+  netUsage: 7,
+  temp: 42,
+  uptimeSeconds: 0,
+  currentApp: null,
+  notifPanelOpen: false,
+  appListOpen: false,
+  pendingModalAction: null,
+  terminalHistory: [],
+  terminalHistoryIdx: -1,
+};
+
+// ═══════════════════════════════════════════════════════
+//  TILE DATA
+// ═══════════════════════════════════════════════════════
+// SVG icons map
+const SVG = {
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  shield:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  cpu:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>`,
+  folder:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+  terminal: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`,
+  sliders:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>`,
+  info:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+  phone:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.45 5.45l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+  mail:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
+  camera:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  music:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+  maps:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>`,
+  people:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  store:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
+  edge:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  clock:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  calc:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10"/><line x1="12" y1="10" x2="12" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/><line x1="16" y1="18" x2="16" y2="18"/></svg>`,
+};
+
+const tiles1 = [
+  { svg:'phone',    label:'الهاتف',      color:'#107c10', app:'app-phone',    size:'' },
+  { svg:'mail',     label:'البريد',      color:'#0078d4', app:'app-mail',     size:'' },
+  { svg:'edge',     label:'Edge',        color:'#0078d4', app:'app-edge',     size:'wide' },
+  { svg:'camera',   label:'الكاميرا',    color:'#1a1a1a', app:'app-camera',   size:'' },
+  { svg:'music',    label:'الموسيقى',    color:'#e81123', app:'app-music',    size:'' },
+  { svg:'people',   label:'جهات الاتصال',color:'#00b294', app:'app-people',   size:'' },
+  { svg:'maps',     label:'الخرائط',     color:'#107c10', app:'app-maps',     size:'' },
+  { svg:'calendar', label:'التقويم',     color:'#0078d4', app:'app-calendar', size:'' },
+  { svg:'store',    label:'المتجر',      color:'#7a7574', app:'app-store',    size:'' },
+  { svg:'clock',    label:'الساعة',      color:'#004e8c', app:'app-clock',    size:'' },
+  { svg:'calc',     label:'الحاسبة',     color:'#004e8c', app:'app-calc',     size:'' },
+  { svg:'settings', label:'الإعدادات',   color:'#2c3e50', app:'app-settings', size:'' },
+  { svg:'folder',   label:'الملفات',     color:'#2980b9', app:'app-files',    size:'' },
+  { svg:'terminal', label:'الطرفية',     color:'#111',    app:'app-terminal', size:'' },
+];
+
+const tiles2 = [];
+
+// ═══════════════════════════════════════════════════════
+//  ALL DATA (must be before init calls)
+// ═══════════════════════════════════════════════════════
+const allApps = [
+  { svg:'phone',    color:'#107c10', name:'الهاتف',        desc:'المكالمات والاتصالات',      app:'app-phone'    },
+  { svg:'mail',     color:'#0078d4', name:'البريد',        desc:'إدارة رسائل البريد',        app:'app-mail'     },
+  { svg:'edge',     color:'#0078d4', name:'Edge',          desc:'تصفح الإنترنت',             app:'app-edge'     },
+  { svg:'camera',   color:'#1a1a1a', name:'الكاميرا',      desc:'التصوير والفيديو',          app:'app-camera'   },
+  { svg:'music',    color:'#e81123', name:'الموسيقى',      desc:'مشغل الموسيقى',             app:'app-music'    },
+  { svg:'people',   color:'#00b294', name:'جهات الاتصال',  desc:'إدارة جهات الاتصال',        app:'app-people'   },
+  { svg:'maps',     color:'#107c10', name:'الخرائط',       desc:'التنقل والخرائط',           app:'app-maps'     },
+  { svg:'calendar', color:'#0078d4', name:'التقويم',       desc:'الجدول والمواعيد',          app:'app-calendar' },
+  { svg:'store',    color:'#7a7574', name:'المتجر',        desc:'تنزيل التطبيقات',           app:'app-store'    },
+  { svg:'clock',    color:'#004e8c', name:'الساعة',        desc:'المنبه والمؤقت',            app:'app-clock'    },
+  { svg:'calc',     color:'#004e8c', name:'الحاسبة',       desc:'العمليات الحسابية',         app:'app-calc'     },
+  { svg:'settings', color:'#2c3e50', name:'الإعدادات',     desc:'تخصيص النظام والجهاز',      app:'app-settings' },
+  { svg:'folder',   color:'#2980b9', name:'الملفات',       desc:'استعراض وإدارة الملفات',    app:'app-files'    },
+  { svg:'terminal', color:'#111',    name:'الطرفية',       desc:'واجهة سطر الأوامر',         app:'app-terminal' },
+];
+
+const processes = [
+  { icon:'🖥️', name:'lxr-kernel', pid: 1, cpu: 2.1, mem: 128, key:'system' },
+  { icon:'🖼️', name:'lxr-ui', pid: 432, cpu: 8.3, mem: 512, key:'ui' },
+  { icon:'🛡️', name:'lxr-firewall', pid: 205, cpu: 0.4, mem: 64, key:'fw' },
+  { icon:'📡', name:'lxr-netd', pid: 318, cpu: 1.2, mem: 96, key:'net' },
+  { icon:'💾', name:'lxr-memoryd', pid: 412, cpu: 3.5, mem: 256, key:'mem' },
+  { icon:'🔊', name:'lxr-audiod', pid: 509, cpu: 0.8, mem: 48, key:'audio' },
+  { icon:'⚡', name:'lxr-powerd', pid: 611, cpu: 0.2, mem: 32, key:'power' },
+  { icon:'🔄', name:'lxr-updater', pid: 720, cpu: 5.7, mem: 180, key:'upd' },
+  { icon:'🔍', name:'lxr-search', pid: 834, cpu: 1.9, mem: 144, key:'search' },
+  { icon:'📦', name:'lxr-pkgmgr', pid: 941, cpu: 0.3, mem: 80, key:'pkg' },
+];
+
+const notifications = [
+  { icon:'⚙️', title:'خدمة النظام', msg:'تم تحميل LXR Kernel بنجاح', time:'الآن', color:'#0078d4' },
+  { icon:'🛡️', title:'جدار الحماية', msg:'تم منع 3 محاولات اتصال مشبوهة', time:'٢ د', color:'#c0392b' },
+  { icon:'💾', title:'إدارة الذاكرة', msg:'تم تحرير 512 MB من ذاكرة الكاش', time:'٥ د', color:'#2980b9' },
+  { icon:'🔄', title:'مدير التحديثات', msg:'3 تحديثات أمنية جاهزة للتثبيت', time:'١٠ د', color:'#6c3483' },
+  { icon:'⚡', title:'إدارة الطاقة', msg:'الوضع الاقتصادي يوفر 18% من الطاقة', time:'١٥ د', color:'#1a6b3a' },
+];
+
+const fileTree = {
+  '/': [
+    { icon:'📂', name:'النظام', type:'dir', path:'/system' },
+    { icon:'📂', name:'البيانات', type:'dir', path:'/data' },
+    { icon:'📂', name:'المخزن المؤقت', type:'dir', path:'/cache' },
+    { icon:'📂', name:'الصور', type:'dir', path:'/pictures' },
+    { icon:'📂', name:'التنزيلات', type:'dir', path:'/downloads' },
+    { icon:'📂', name:'المستندات', type:'dir', path:'/docs' },
+    { icon:'📄', name:'kernel.log', type:'file' },
+    { icon:'📄', name:'boot.cfg', type:'file' },
+    { icon:'📄', name:'system.ini', type:'file' },
+    { icon:'🔐', name:'secure.key', type:'file' },
+  ],
+  '/system': [
+    { icon:'📂', name:'bin', type:'dir', path:'/system/bin' },
+    { icon:'📂', name:'lib', type:'dir', path:'/system/lib' },
+    { icon:'📂', name:'etc', type:'dir', path:'/system/etc' },
+    { icon:'📄', name:'hosts', type:'file' },
+    { icon:'📄', name:'fstab', type:'file' },
+  ],
+  '/data': [
+    { icon:'📂', name:'التطبيقات', type:'dir', path:'/data/apps' },
+    { icon:'📂', name:'قواعد البيانات', type:'dir', path:'/data/db' },
+    { icon:'📄', name:'prefs.db', type:'file' },
+  ],
+};
+
+let currentPath = '/';
+
+const DAYS_AR = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+const modalData = {
+  restart: { title:'إعادة التشغيل', body:'هل تريد إعادة تشغيل النظام؟ سيتم إغلاق جميع التطبيقات الجارية.', color:'#2980b9' },
+  shutdown: { title:'إيقاف التشغيل', body:'هل تريد إيقاف تشغيل النظام؟ تأكد من حفظ جميع البيانات.', color:'#c0392b' },
+  sleep: { title:'وضع السكون', body:'سيتم تقليل استهلاك الطاقة وإيقاف الشاشة.', color:'#6c3483' },
+  'factory-reset': { title:'⚠️ إعادة ضبط المصنع', body:'تحذير: سيتم مسح جميع البيانات والإعدادات بشكل نهائي وغير قابل للاسترداد!', color:'#c0392b' },
+  'kill-process': { title:'إنهاء العملية', body:'', color:'#c0392b' },
+};
+
+// ═══════════════════════════════════════════════════════
+//  RENDER TILES
+// ═══════════════════════════════════════════════════════
+function renderTiles(data, gridId) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.innerHTML = '';
+  data.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'tile' + (t.size ? ' ' + t.size : '');
+    el.style.setProperty('--tile-color', t.color);
+    el.innerHTML = `
+      <div class="tile-svg-icon">${SVG[t.svg] || ''}</div>
+      <div class="tile-label">${t.label}</div>`;
+    el.addEventListener('click', (e) => {
+      addRipple(e, el);
+      if (t.app) openApp(t.app);
+      else if (t.action === 'notif') toggleNotifPanel();
+      else if (t.action === 'toast') showToast(t.msg);
+    });
+    grid.appendChild(el);
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════
+//  LOCK SCREEN
+// ═══════════════════════════════════════════════════════
+document.getElementById('lock-screen').addEventListener('click', () => {
+  document.getElementById('lock-screen').classList.add('slide-up');
+  setTimeout(() => {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('status-bar').style.display = 'flex';
+    document.getElementById('home-screen').classList.add('active');
+    document.getElementById('nav-bar').classList.add('visible');
+  }, 600);
+});
+
+// ═══════════════════════════════════════════════════════
+//  CLOCK
+// ═══════════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const timeStr = h + ':' + m;
+  document.getElementById('lock-time').textContent = timeStr;
+  document.getElementById('status-time').textContent = timeStr;
+
+  const dateStr = DAYS_AR[now.getDay()] + '، ' + now.getDate() + ' ' + MONTHS_AR[now.getMonth()];
+  document.getElementById('lock-date').textContent = dateStr;
+}
+setInterval(updateClock, 1000);
+
+// ═══════════════════════════════════════════════════════
+//  SIMULATED SYSTEM METRICS
+// ═══════════════════════════════════════════════════════
+function randomVariance(val, range) {
+  return Math.max(2, Math.min(95, val + (Math.random() * range * 2 - range)));
+}
+
+setInterval(() => {
+  state.cpuUsage = randomVariance(state.cpuUsage, 8);
+  state.ramUsage = randomVariance(state.ramUsage, 3);
+  state.diskUsage = randomVariance(state.diskUsage, 4);
+  state.netUsage = randomVariance(state.netUsage, 5);
+  state.temp = Math.round(randomVariance(state.temp, 2));
+  state.uptimeSeconds++;
+
+  // Update task manager if open
+  const cpuFill = document.getElementById('cpu-fill');
+  const cpuPct = document.getElementById('cpu-pct');
+  if (cpuFill) {
+    cpuFill.style.width = state.cpuUsage.toFixed(0) + '%';
+    cpuPct.textContent = state.cpuUsage.toFixed(0) + '%';
+    document.getElementById('ram-fill').style.width = state.ramUsage.toFixed(0) + '%';
+    document.getElementById('ram-pct').textContent = state.ramUsage.toFixed(0) + '%';
+    document.getElementById('disk-fill').style.width = state.diskUsage.toFixed(0) + '%';
+    document.getElementById('disk-pct').textContent = state.diskUsage.toFixed(0) + '%';
+    document.getElementById('net-fill').style.width = state.netUsage.toFixed(0) + '%';
+    document.getElementById('net-pct').textContent = state.netUsage.toFixed(0) + '%';
+  }
+
+  const tempEl = document.getElementById('status-temp');
+  if (tempEl) tempEl.textContent = state.temp + '°C';
+  const tempDisp = document.getElementById('temp-display');
+  if (tempDisp) tempDisp.textContent = state.temp + '°C';
+
+  // Update uptime
+  const h = Math.floor(state.uptimeSeconds / 3600);
+  const min = Math.floor((state.uptimeSeconds % 3600) / 60);
+  const sec = state.uptimeSeconds % 60;
+  const uptimeDisp = document.getElementById('uptime-display');
+  if (uptimeDisp) uptimeDisp.textContent = `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+
+  // Update task list process CPU values
+  updateTaskCPUs();
+}, 1500);
+
+// ═══════════════════════════════════════════════════════
+//  APP NAVIGATION
+// ═══════════════════════════════════════════════════════
+function openApp(appId) {
+  if (state.currentApp) {
+    document.getElementById(state.currentApp).classList.remove('open');
+  }
+  state.currentApp = appId;
+  const screen = document.getElementById(appId);
+  screen.style.display = 'flex';
+  requestAnimationFrame(() => screen.classList.add('open'));
+}
+
+function closeApp(appId) {
+  const screen = document.getElementById(appId);
+  screen.classList.add('closing');
+  setTimeout(() => {
+    screen.classList.remove('open','closing');
+    screen.style.display = 'none';
+  }, 350);
+  if (state.currentApp === appId) state.currentApp = null;
+}
+
+function goBack() {
+  if (state.appListOpen) {
+    toggleAppList();
+  } else if (state.currentApp) {
+    closeApp(state.currentApp);
+  } else if (state.notifPanelOpen) {
+    toggleNotifPanel();
+  }
+}
+
+function goHome() {
+  if (state.currentApp) closeApp(state.currentApp);
+  if (state.appListOpen) toggleAppList();
+  if (state.notifPanelOpen) toggleNotifPanel();
+  document.getElementById('home-screen').scrollTo({top:0, behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════════════════
+//  APP LIST
+// ═══════════════════════════════════════════════════════
+function renderAppList() {
+  const el = document.getElementById('app-list-items');
+  el.innerHTML = allApps.map(a => `
+    <div class="app-list-item" onclick="openApp('${a.app}');toggleAppList()">
+      <div class="app-list-icon" style="background:${a.color}">${SVG[a.svg]||''}</div>
+      <div>
+        <div class="app-list-name">${a.name}</div>
+        <div class="app-list-desc">${a.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openSearch() {
+  const s = document.getElementById('search-screen');
+  s.style.display = 'flex';
+  requestAnimationFrame(() => s.classList.add('open'));
+  setTimeout(() => document.getElementById('search-input').focus(), 280);
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-input').value = '';
+}
+
+function closeSearch() {
+  const s = document.getElementById('search-screen');
+  s.style.transform = 'translateX(-100%)';
+  setTimeout(() => {
+    s.style.display = 'none';
+    s.style.transform = '';
+    s.classList.remove('open');
+  }, 280);
+}
+
+function doSearch(q) {
+  const results = document.getElementById('search-results');
+  if (q.trim() === '') { results.innerHTML = ''; return; }
+  const filtered = allApps.filter(a => a.name.includes(q) || a.desc.includes(q));
+  if (filtered.length === 0) {
+    results.innerHTML = `<div class="search-empty">لا توجد نتائج لـ "${q}"</div>`;
+    return;
+  }
+  results.innerHTML = filtered.map(a => `
+    <div class="search-result-item" onclick="openApp('${a.app}');closeSearch()">
+      <div class="search-result-icon" style="background:${a.color}">${SVG[a.svg]||''}</div>
+      <div>
+        <div class="search-result-name">${a.name}</div>
+        <div class="search-result-desc">${a.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleAppList() {
+  const el = document.getElementById('app-list-screen');
+  state.appListOpen = !state.appListOpen;
+  if (state.appListOpen) {
+    el.style.display = 'block';
+    requestAnimationFrame(() => el.classList.add('open'));
+  } else {
+    el.classList.remove('open');
+    setTimeout(() => el.style.display = 'none', 350);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  NOTIFICATION PANEL
+// ═══════════════════════════════════════════════════════
+function renderNotifItems() {
+  const el = document.getElementById('notif-items');
+  el.innerHTML = notifications.map(n => `
+    <div class="notif-item" style="border-left-color:${n.color}">
+      <div class="notif-item-icon">${n.icon}</div>
+      <div class="notif-item-body">
+        <div class="notif-item-title">${n.title}</div>
+        <div class="notif-item-msg">${n.msg}</div>
+      </div>
+      <div class="notif-item-time">${n.time}</div>
+    </div>
+  `).join('');
+}
+
+function clearNotifs() {
+  document.getElementById('notif-items').innerHTML =
+    '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.3);font-size:12px;">لا توجد إشعارات</div>';
+  showToast('تم مسح جميع الإشعارات');
+}
+
+// Status bar swipe down to open notif panel
+let touchStartY = 0;
+document.getElementById('status-bar').addEventListener('touchstart', e => {
+  touchStartY = e.touches[0].clientY;
+});
+document.getElementById('status-bar').addEventListener('touchend', e => {
+  if (e.changedTouches[0].clientY - touchStartY > 30) toggleNotifPanel();
+});
+document.getElementById('status-bar').addEventListener('click', toggleNotifPanel);
+
+function toggleNotifPanel() {
+  state.notifPanelOpen = !state.notifPanelOpen;
+  document.getElementById('notif-panel').classList.toggle('open', state.notifPanelOpen);
+}
+
+// ═══════════════════════════════════════════════════════
+//  TASK MANAGER
+// ═══════════════════════════════════════════════════════
+function renderTaskList() {
+  const el = document.getElementById('task-list');
+  if (!el) return;
+  el.innerHTML = processes.map((p,i) => `
+    <div class="task-item" id="task-${p.key}">
+      <div class="task-item-icon">${p.icon}</div>
+      <div class="task-item-info">
+        <div class="task-item-name">${p.name}</div>
+        <div class="task-item-pid">PID: ${p.pid}</div>
+      </div>
+      <div>
+        <div class="task-item-cpu" id="tcpu-${p.key}">${p.cpu.toFixed(1)}%</div>
+        <div class="task-item-mem">${p.mem} MB</div>
+      </div>
+      <div class="task-kill-btn" onclick="killProcess('${p.key}','${p.name}')">✕</div>
+    </div>
+  `).join('');
+}
+
+function updateTaskCPUs() {
+  processes.forEach(p => {
+    if (p.killed) return;
+    p.cpu = Math.max(0.1, p.cpu + (Math.random() * 2 - 1));
+    const el = document.getElementById('tcpu-' + p.key);
+    if (el) el.textContent = p.cpu.toFixed(1) + '%';
+  });
+}
+
+function killProcess(key, name) {
+  showModal('kill-process', name);
+  state.pendingKillKey = key;
+  state.pendingKillName = name;
+}
+
+// ═══════════════════════════════════════════════════════
+//  FILE MANAGER
+// ═══════════════════════════════════════════════════════
+function renderFiles(path) {
+  path = path || '/';
+  currentPath = path;
+  document.getElementById('files-path').textContent = path;
+  const grid = document.getElementById('files-grid');
+  const files = fileTree[path] || [
+    { icon:'📄', name:'لا توجد ملفات', type:'file' }
+  ];
+  grid.innerHTML = files.map(f => `
+    <div class="file-item" onclick="${f.type==='dir' ? `renderFiles('${f.path}')` : `showToast('فتح: ${f.name}')`}">
+      <div class="file-icon">${f.icon}</div>
+      <div class="file-name">${f.name}</div>
+    </div>
+  `).join('');
+
+  if (path !== '/') {
+    grid.innerHTML = `
+      <div class="file-item" onclick="renderFiles('/')">
+        <div class="file-icon">⬆️</div>
+        <div class="file-name">رجوع</div>
+      </div>` + grid.innerHTML;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  TERMINAL
+// ═══════════════════════════════════════════════════════
+const termCommands = {
+  help: () => `الأوامر المتاحة:\n  help      — عرض هذه القائمة\n  clear     — مسح الشاشة\n  ls        — عرض الملفات\n  ps        — عرض العمليات\n  top       — إحصائيات النظام\n  uname     — معلومات النواة\n  uptime    — وقت التشغيل\n  whoami    — المستخدم الحالي\n  df        — مساحة القرص\n  free      — الذاكرة المتاحة\n  reboot    — إعادة التشغيل\n  shutdown  — إيقاف التشغيل\n  ping      — فحص الاتصال\n  netstat   — إحصائيات الشبكة\n  lxr       — معلومات LXR OS`,
+  ls: () => `drwxr-xr-x  النظام\ndrwxr-xr-x  البيانات\ndrwxr-xr-x  المخزن المؤقت\n-rw-r--r--  kernel.log\n-rw-r--r--  boot.cfg\n-rw-r--r--  system.ini`,
+  ps: () => processes.map(p => `${String(p.pid).padEnd(6)} ${p.name.padEnd(20)} ${p.cpu.toFixed(1).padStart(5)}% CPU`).join('\n'),
+  top: () => `CPU: ${state.cpuUsage.toFixed(1)}%\nRAM: ${state.ramUsage.toFixed(1)}%  (${(state.ramUsage * 0.08).toFixed(2)} GB مستخدم)\nDisk: ${state.diskUsage.toFixed(1)}%\nNet: ${state.netUsage.toFixed(1)}%\nTemp: ${state.temp}°C`,
+  uname: () => 'LXR OS Kernel 2.4.1-lts #1 SMP ARM',
+  whoami: () => 'root',
+  uptime: () => {
+    const h = Math.floor(state.uptimeSeconds / 3600);
+    const m = Math.floor((state.uptimeSeconds % 3600) / 60);
+    const s = state.uptimeSeconds % 60;
+    return `up ${h}h ${m}m ${s}s — load avg: ${(state.cpuUsage/100*4).toFixed(2)}`;
+  },
+  df: () => `Filesystem      Size  Used  Avail  Use%\n/dev/mmcblk0p1  128G   47G    81G   37%\ntmpfs           4.0G  512M   3.5G  13%`,
+  free: () => `              total    used    free   shared\nMem:           8.0G    4.2G    3.8G    256M\nSwap:          2.0G    0.1G    1.9G`,
+  lxr: () => 'LXR OS v2.4.1 — نظام تشغيل مفتوح المصدر\nمبني على LXR Kernel — بنية ARM\nجميع الحقوق محفوظة © LXR Systems 2026',
+  ping: () => 'PING lxr-gateway (192.168.1.1)\n64 bytes from 192.168.1.1: time=2.1ms\n64 bytes from 192.168.1.1: time=1.9ms\n64 bytes from 192.168.1.1: time=2.3ms\n--- 3 packets: 3 received, 0% loss',
+  netstat: () => `Proto  Recv  Send  Local           State\nTCP    0     0     127.0.0.1:8080  LISTEN\nTCP    0     0     0.0.0.0:443     LISTEN\nUDP    -     -     0.0.0.0:53      -`,
+  reboot: () => { setTimeout(() => window.location.reload(), 800); return 'جارٍ إعادة تشغيل النظام...'; },
+  shutdown: () => { setTimeout(() => { document.body.innerHTML = '<div style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:monospace;font-size:14px;letter-spacing:2px;">تم إيقاف التشغيل بأمان.</div>'; }, 1000); return 'جارٍ إيقاف جميع الخدمات...'; },
+  clear: () => null,
+};
+
+function addTerminalLine(text, cls) {
+  const out = document.getElementById('terminal-output');
+  if (!text) return;
+  text.split('\n').forEach(line => {
+    const div = document.createElement('div');
+    div.className = 'terminal-line ' + (cls||'');
+    div.textContent = line;
+    out.appendChild(div);
+  });
+  out.scrollTop = out.scrollHeight;
+}
+
+function handleTerminalInput(e) {
+  if (e.key === 'Enter') {
+    const input = document.getElementById('terminal-input');
+    const cmd = input.value.trim();
+    if (!cmd) return;
+
+    state.terminalHistory.unshift(cmd);
+    state.terminalHistoryIdx = -1;
+    addTerminalLine('lxr@system:~$ ' + cmd, 'info');
+    input.value = '';
+
+    const parts = cmd.split(' ');
+    const fn = termCommands[parts[0]];
+    if (parts[0] === 'clear') {
+      document.getElementById('terminal-output').innerHTML = '';
+    } else if (fn) {
+      const result = fn(parts.slice(1));
+      if (result) addTerminalLine(result);
+    } else {
+      addTerminalLine(`bash: ${parts[0]}: الأمر غير موجود`, 'err');
+    }
+  }
+  if (e.key === 'ArrowUp') {
+    state.terminalHistoryIdx = Math.min(state.terminalHistoryIdx + 1, state.terminalHistory.length - 1);
+    document.getElementById('terminal-input').value = state.terminalHistory[state.terminalHistoryIdx] || '';
+  }
+  if (e.key === 'ArrowDown') {
+    state.terminalHistoryIdx = Math.max(state.terminalHistoryIdx - 1, -1);
+    document.getElementById('terminal-input').value = state.terminalHistoryIdx >= 0 ? state.terminalHistory[state.terminalHistoryIdx] : '';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SETTINGS TOGGLES
+// ═══════════════════════════════════════════════════════
+function toggleSetting(item) {
+  const toggle = item.querySelector('.toggle');
+  if (!toggle) return;
+  toggle.classList.toggle('on');
+  const label = item.querySelector('.settings-item-label').textContent;
+  const state_on = toggle.classList.contains('on');
+  showToast(label + ': ' + (state_on ? 'تشغيل ✓' : 'إيقاف'));
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════════════════
+
+function showModal(type, extra) {
+  const data = modalData[type];
+  if (!data) return;
+  document.getElementById('modal-title').textContent = data.title;
+  document.getElementById('modal-body').textContent = type === 'kill-process'
+    ? `هل تريد إنهاء العملية "${extra}"؟ قد يؤثر ذلك على استقرار النظام.`
+    : data.body;
+  document.getElementById('modal-box').style.setProperty('--modal-color', data.color);
+  state.pendingModalAction = type;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function confirmModal() {
+  const action = state.pendingModalAction;
+  document.getElementById('modal-overlay').classList.remove('open');
+
+  if (action === 'restart') {
+    showToast('جارٍ إعادة التشغيل...');
+    setTimeout(() => window.location.reload(), 1500);
+  } else if (action === 'shutdown') {
+    document.body.style.transition = 'opacity 1s';
+    document.body.style.opacity = '0';
+    setTimeout(() => {
+      document.body.innerHTML = `<div style="background:#000;color:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;height:100vh;font-family:'Segoe UI',sans-serif;font-size:13px;letter-spacing:3px;">تم إيقاف التشغيل بأمان</div>`;
+    }, 1000);
+  } else if (action === 'sleep') {
+    document.getElementById('lock-screen').style.display = 'flex';
+    document.getElementById('lock-screen').classList.remove('slide-up');
+    document.getElementById('home-screen').classList.remove('active');
+    document.getElementById('status-bar').style.display = 'none';
+    document.getElementById('nav-bar').classList.remove('visible');
+  } else if (action === 'factory-reset') {
+    showToast('⚠️ تم إلغاء إعادة الضبط — هذا نظام محاكاة');
+  } else if (action === 'kill-process') {
+    const key = state.pendingKillKey;
+    const el = document.getElementById('task-' + key);
+    if (el) {
+      el.style.transition = 'opacity 0.3s';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 300);
+    }
+    showToast('تم إنهاء: ' + state.pendingKillName);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+function showToast(msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('out');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  RIPPLE EFFECT
+// ═══════════════════════════════════════════════════════
+function addRipple(e, el) {
+  const ripple = document.createElement('div');
+  ripple.className = 'ripple';
+  const rect = el.getBoundingClientRect();
+  ripple.style.left = (e.clientX - rect.left - 40) + 'px';
+  ripple.style.top = (e.clientY - rect.top - 40) + 'px';
+  el.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 400);
+}
+
+// Add ripple to all tiles on click
+document.querySelectorAll('.tile').forEach(tile => {
+  tile.addEventListener('click', (e) => addRipple(e, tile));
+});
+
+// ═══════════════════════════════════════════════════════
+//  BATTERY SIMULATION
+// ═══════════════════════════════════════════════════════
+setInterval(() => {
+  state.battery = Math.max(5, state.battery - 0.05);
+  const pct = Math.round(state.battery);
+  const fill = document.getElementById('battery-fill');
+  const pctEl = document.getElementById('battery-pct');
+  if (fill) {
+    fill.style.width = pct + '%';
+    fill.style.background = '#fff';
+  }
+  if (pctEl) pctEl.textContent = pct + '%';
+}, 10000);
+
+// ═══════════════════════════════════════════════════════
+//  CLOCK APP
+// ═══════════════════════════════════════════════════════
+setInterval(() => {
+  const el = document.getElementById('clock-display');
+  const sec = document.getElementById('clock-seconds');
+  if (el) {
+    const n = new Date();
+    el.textContent = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+    if (sec) sec.textContent = String(n.getSeconds()).padStart(2,'0');
+  }
+}, 1000);
+
+// ═══════════════════════════════════════════════════════
+//  CALCULATOR APP
+// ═══════════════════════════════════════════════════════
+let calcVal = '0', calcOp = null, calcPrev = null, calcFresh = false;
+function calcPress(k) {
+  const d = document.getElementById('calc-display');
+  if (!d) return;
+  if (k === 'C') { calcVal='0'; calcOp=null; calcPrev=null; calcFresh=false; }
+  else if (k === '=' ) {
+    if (calcOp && calcPrev !== null) {
+      const a = parseFloat(calcPrev), b = parseFloat(calcVal);
+      const res = calcOp==='+' ? a+b : calcOp==='−' ? a-b : calcOp==='×' ? a*b : calcOp==='÷' ? (b?a/b:0) : b;
+      calcVal = String(parseFloat(res.toFixed(10)));
+      calcOp=null; calcPrev=null; calcFresh=true;
+    }
+  } else if (['+','−','×','÷'].includes(k)) {
+    calcPrev = calcVal; calcOp = k; calcFresh = true;
+  } else if (k === '±') { calcVal = String(-parseFloat(calcVal)); }
+  else if (k === '%') { calcVal = String(parseFloat(calcVal)/100); }
+  else if (k === '.') { if (!calcVal.includes('.')) calcVal += '.'; }
+  else if (k !== ' ') {
+    if (calcFresh || calcVal === '0') { calcVal = k; calcFresh = false; }
+    else calcVal += k;
+  }
+  d.textContent = calcVal;
+}
+
+// ═══════════════════════════════════════════════════════
+//  PHONE APP
+// ═══════════════════════════════════════════════════════
+let phoneNum = '';
+function appendPhone(n) {
+  phoneNum += n;
+  const el = document.getElementById('phone-number');
+  if (el) el.textContent = phoneNum || '+966 5X XXX XXXX';
+}
+
+
+renderTiles(tiles1, 'tiles-grid');
+renderAppList();
+renderTaskList();
+renderFiles();
+renderNotifItems();
+updateClock();
+
+setTimeout(() => {
+  const boot = document.getElementById('boot-screen');
+  boot.style.transition = 'opacity 0.12s cubic-bezier(0.4,0,1,1)';
+  boot.classList.add('fade-out');
+  setTimeout(() => {
+    boot.style.display = 'none';
+  }, 120);
+}, 7000);
+</script>
+</body>
+</html>
